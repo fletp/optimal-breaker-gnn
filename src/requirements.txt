@@ -1,3 +1,4 @@
+# Kedro dependencies
 black~=22.0
 flake8>=3.7.9, <5.0
 ipython>=7.31.1, <8.0; python_version < '3.8'
@@ -12,3 +13,12 @@ nbstripout~=0.4
 pytest-cov~=3.0
 pytest-mock>=1.7.1, <2.0
 pytest~=7.2
+
+# Project dependencies
+torch~=2.1
+torch_geometric~=2.4
+torch_scatter~=2.1
+torch_sparse~=0.6
+pandas~=2.1
+seaborn~=0.13
+networkx~=3.1
