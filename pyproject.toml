@@ -1,0 +1,17 @@
+[tool.kedro]
+package_name = "optimal_breaker_gnn"
+project_name = "Optimal Breaker GNN"
+kedro_init_version = "0.18.13"
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = """
+--cov-report term-missing \
+--cov src/optimal_breaker_gnn -ra"""
+
+[tool.coverage.report]
+fail_under = 0
+show_missing = true
+exclude_lines = ["pragma: no cover", "raise NotImplementedError"]
