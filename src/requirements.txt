@@ -15,6 +15,7 @@ pytest-mock>=1.7.1, <2.0
 pytest~=7.2
 
 # Project dependencies
+cvxpy~=1.4
 torch~=2.1
 torch_geometric~=2.4
 torch_scatter~=2.1
