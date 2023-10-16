@@ -2,3 +2,25 @@
 #
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+# Raw network information from RTE
+edges:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/edges.csv
+  load_args:
+    comment: "#"
+
+nodes:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/nodes.csv
+  load_args:
+    comment: "#"
+
+# Network objects
+network_base:
+  type: pickle.PickleDataSet
+  filepath: data/03_primary/network_base.pickle
+
+network_scenario:
+  type: pickle.PickleDataSet
+  filepath: data/03_primary/network_loaded.pickle
