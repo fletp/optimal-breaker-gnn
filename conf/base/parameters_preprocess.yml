@@ -3,3 +3,23 @@
 #
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
+
+network_scenario:
+  scale_factor: 1000
+  load_gen_factor: 10000
+  flow_factor: 400
+  random_seed: 42
+  gen_power:
+    min_norm: 0
+    max_norm: 500
+  load_power:
+    min_norm: 0
+    max_norm: 500
+  capacity:
+    min_norm: 0.99
+    max_norm: 1.01
+    interconnect_multiplier: 10
+  reactance:
+    min_norm: 0.99
+    max_norm: 1.01
+    interconnect_multiplier: 2

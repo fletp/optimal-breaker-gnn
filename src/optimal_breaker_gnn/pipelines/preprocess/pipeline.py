@@ -18,7 +18,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=create_network_scenario,
-                inputs="network_base",
+                inputs=["network_base", "params:network_scenario"],
                 outputs="network_scenario",
                 name="create_network_scenario",
             ),
