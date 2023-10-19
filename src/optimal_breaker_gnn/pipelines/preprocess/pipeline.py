@@ -4,7 +4,7 @@ generated using Kedro 0.18.13
 """
 
 from kedro.pipeline import Pipeline, pipeline, node
-from .nodes import build_base_network, create_network_scenario
+from .nodes import build_base_network, create_network_scenario, optimize_scenario
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -21,6 +21,12 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["network_base", "params:network_scenario"],
                 outputs="network_scenario",
                 name="create_network_scenario",
+            ),
+            node(
+                func=optimize_scenario,
+                inputs=["network_scenario", "params:optimize"],
+                outputs="network_optim",
+                name="optimize_scenario",
             ),
         ]
     )

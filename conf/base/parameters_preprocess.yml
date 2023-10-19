@@ -23,3 +23,7 @@ network_scenario:
     min_norm: 0.99
     max_norm: 1.01
     interconnect_multiplier: 2
+
+optimize:
+  big_m_scale: 10
+

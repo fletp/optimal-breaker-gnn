@@ -24,3 +24,7 @@ network_base:
 network_scenario:
   type: pickle.PickleDataSet
   filepath: data/03_primary/network_loaded.pickle
+
+network_optim:
+  type: pickle.PickleDataSet
+  filepath: data/03_primary/network_optim.pickle
