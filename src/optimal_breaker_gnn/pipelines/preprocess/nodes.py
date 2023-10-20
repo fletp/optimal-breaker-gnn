@@ -178,12 +178,12 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
             genr = a["genr"]
             load = (alpha * lam + beta) * a["load"]
 
-        net_flow = 0
+        net_out_flow = 0
         for _, j in G.out_edges(v):
-            net_flow -= G.edges[v, j]["flow"]
+            net_out_flow += G.edges[v, j]["flow"]
         for i, _ in G.in_edges(v):
-            net_flow += G.edges[i, v]["flow"]
-        c.append(load - genr - net_flow == 0)
+            net_out_flow -= G.edges[i, v]["flow"]
+        c.append(net_out_flow + load - genr == 0)
 
         # Connected components
         if a["n_breakers"] >= 1:
