@@ -210,7 +210,7 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         objective=obj,
         constraints=c,
     )
-    prob.solve(solver=cp.GUROBI)
+    prob.solve(solver=cp.GUROBI, verbose=True)
     break_sets = {e: G.edges[e]["breaker_closed"].value == 1 for e in breakers}
     break_df = pd.DataFrame.from_dict(break_sets, orient="index", columns=["breaker_closed"])
     break_df.index = pd.MultiIndex.from_tuples(break_df.index, names=["source", "target"])
