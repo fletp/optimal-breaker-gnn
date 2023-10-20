@@ -27,6 +27,12 @@ def build_base_network(nodes: pd.DataFrame, edges: pd.DataFrame) -> nx.Graph:
 
 def create_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     """Create a scenario by adding load, generation, capacities, and reactances to the network."""
+    if params["randomize"]:
+        G = randomize_network_scenario(G, params)
+    return G
+
+def randomize_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
+    """Add random load, generation, capacities, and reactances to the network."""
     tot_power = params["load_gen_factor"] / params["scale_factor"]
     capacity_multiplier = params["flow_factor"] / params["scale_factor"]
     G = create_loads(

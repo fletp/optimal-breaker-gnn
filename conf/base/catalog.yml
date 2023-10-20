@@ -6,13 +6,13 @@
 # Raw network information from RTE
 edges:
   type: pandas.CSVDataSet
-  filepath: data/02_intermediate/edges.csv
+  filepath: data/02_intermediate/edges_test_loaded.csv
   load_args:
     comment: "#"
 
 nodes:
   type: pandas.CSVDataSet
-  filepath: data/02_intermediate/nodes.csv
+  filepath: data/02_intermediate/nodes_test_loaded.csv
   load_args:
     comment: "#"
 
