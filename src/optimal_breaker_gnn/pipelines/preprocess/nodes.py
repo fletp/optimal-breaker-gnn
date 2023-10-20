@@ -140,7 +140,6 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     buses_z1 = [v for v in G.nodes if G.nodes[v]["zone"] == 1]
     buses_z2 = [v for v in G.nodes if G.nodes[v]["zone"] == 2]
 
-    c = []
     # System-wide parameters, variables, and constraints
     lam = cp.Variable()
     big_M = max([abs(a["load"] - a["genr"]) * params["big_m_scale"] for v, a in G.nodes(data=True)])
@@ -168,6 +167,7 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         else:
             a["flow"] = (G.nodes[u]["angle"] - G.nodes[v]["angle"]) / a["reactance"]
 
+    c = []
     # Node-specific constraints
     for v, a in G.nodes(data=True):
         # Conservation of energy
