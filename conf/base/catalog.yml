@@ -25,6 +25,8 @@ network_scenario:
   type: pickle.PickleDataSet
   filepath: data/03_primary/network_loaded.pickle
 
-network_optim:
+# Optimization results
+optim_res_dict:
   type: pickle.PickleDataSet
-  filepath: data/03_primary/network_optim.pickle
+  filepath: data/03_primary/optim_res_dict.pickle
+  versioned: True

@@ -25,7 +25,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=optimize_scenario,
                 inputs=["network_scenario", "params:optimize"],
-                outputs="network_optim",
+                outputs="optim_res_dict",
                 name="optimize_scenario",
             ),
         ]

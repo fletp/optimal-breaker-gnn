@@ -6,6 +6,8 @@ import pandas as pd
 import networkx as nx
 import numpy as np
 import cvxpy as cp
+import time
+import platform
 from typing import Tuple
 
 def build_base_network(nodes: pd.DataFrame, edges: pd.DataFrame) -> nx.Graph:
@@ -132,43 +134,21 @@ def create_reactances(
 
 def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     """Apply optimization to network."""
-    edges = nx.to_pandas_edgelist(G).set_index(["source", "target"])
-    nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
+    tic = time.perf_counter()
+    # System-wide parameters, variables, and constraints
+    G = set_optim_vars(G, mode=params["mode"])
 
-    breakers = [e for e in G.edges if G.edges[e]["is_breaker"]]
-    branches = [e for e in G.edges if not G.edges[e]["is_breaker"]]
+    c = []
+    # Node-specific constraints
     buses_z1 = [v for v in G.nodes if G.nodes[v]["zone"] == 1]
     buses_z2 = [v for v in G.nodes if G.nodes[v]["zone"] == 2]
-
-    # System-wide parameters, variables, and constraints
-    lam = cp.Variable()
-    big_M = max([abs(a["load"] - a["genr"]) * params["big_m_scale"] for v, a in G.nodes(data=True)])
     t_g_1 = sum([G.nodes[v]["genr"] for v in buses_z1])
     t_g_2 = sum([G.nodes[v]["genr"] for v in buses_z2])
     t_l_1 = sum([G.nodes[v]["load"] for v in buses_z1])
     t_l_2 = sum([G.nodes[v]["load"] for v in buses_z2])
     alpha = t_g_1 / t_l_2
     beta = (t_g_2 - t_l_1) / t_l_2
-
-    # Node-specific parameters, variables, and constraints
-    for v, a in G.nodes(data=True):
-        if v == 1: # Set angle reference point
-            a["angle"] = 0.
-        else:
-            a["angle"] = cp.Variable(name=f"angle_{v}")
-        breaker_edges = [G.edges[e]["is_breaker"] for e in get_in_out_edges(G, v)]
-        a["n_breakers"] = sum(breaker_edges)
-
-    # Edge-specific parameters, variables, and constraints
-    for u, v, a in G.edges(data=True):
-        if a["is_breaker"]:
-            a["breaker_closed"] = cp.Variable(boolean=True)
-            a["flow"] = cp.Variable()
-        else:
-            a["flow"] = (G.nodes[u]["angle"] - G.nodes[v]["angle"]) / a["reactance"]
-
-    c = []
-    # Node-specific constraints
+    lam = cp.Variable()
     for v, a in G.nodes(data=True):
         # Conservation of energy
         if a["zone"] == 1:
@@ -194,6 +174,7 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
             c.append(n >= 1)
 
     # Edge-specific constraints
+    big_M = max([abs(a["load"] - a["genr"]) * params["big_m_scale"] for v, a in G.nodes(data=True)])
     for u, v, a in G.edges(data=True):
         if a["is_breaker"]:
             rhs_a = big_M * a["breaker_closed"]
@@ -210,13 +191,65 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         objective=obj,
         constraints=c,
     )
-    prob.solve(solver=cp.GUROBI, verbose=True)
-    break_sets = {e: G.edges[e]["breaker_closed"].value == 1 for e in breakers}
-    break_df = pd.DataFrame.from_dict(break_sets, orient="index", columns=["breaker_closed"])
-    break_df.index = pd.MultiIndex.from_tuples(break_df.index, names=["source", "target"])
-    return (break_df, lam.value)
+    prob.solve(solver=cp.XPRESS, verbose=True)
+
+    # Make cvxpy variables concrete on the network
+    for i, a in G.nodes(data=True):
+        for k, v in a.items():
+            if type(v) == cp.Variable:
+                a[k] = v.value
+
+    for i, j, a in G.edges(data=True):
+        for k, v in a.items():
+            if type(v) == cp.Variable:
+                a[k] = v.value
+    toc = time.perf_counter()
+
+    res = {
+        "network": G,
+        "obj_val": lam.value,
+        "time_elapsed": toc-tic,
+        "platform": platform.platform()
+    }
+    return res
 
 
 def get_in_out_edges(G: nx.DiGraph, v) -> list[Tuple]:
     """Get list of in and out edges in graph G from node v."""
     return list(G.in_edges(v)) + list(G.out_edges(v))
+
+
+def set_optim_vars(G: nx.DiGraph, mode: str) -> nx.DiGraph:
+    """Set the optimization variables on the network.
+    
+    Args:
+        G:
+            the network on which to set the variables
+        mode:
+            if "label", then leave the "breaker_closed" edge attribute as a
+            variable, but if "eval", then assume that it already exists.
+    
+    Returns: network with variables added on
+    """
+    assert mode in ["label", "eval"]
+    # Node-specific parameters, variables, and constraints
+    for v, a in G.nodes(data=True):
+        if v == 1: # Set angle reference point
+            a["angle"] = 0.
+        else:
+            a["angle"] = cp.Variable(name=f"angle_{v}")
+        breaker_edges = [G.edges[e]["is_breaker"] for e in get_in_out_edges(G, v)]
+        a["n_breakers"] = sum(breaker_edges)
+
+    # Edge-specific parameters, variables, and constraints
+    for u, v, a in G.edges(data=True):
+        if a["is_breaker"]:
+            if mode == "label":
+                a["breaker_closed"] = cp.Variable(boolean=True)
+            elif mode == "eval" and "breaker_closed" not in a:
+                raise Exception("In eval mode, 'breaker_closed' must be pre-defined for all breakers.")
+            a["flow"] = cp.Variable()
+        else:
+            a["flow"] = (G.nodes[u]["angle"] - G.nodes[v]["angle"]) / a["reactance"]
+    
+    return G
