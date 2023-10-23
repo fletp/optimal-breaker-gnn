@@ -5,7 +5,7 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 network_scenario:
-  randomize: False
+  randomize: True
   scale_factor: 1000
   load_gen_factor: 10000
   flow_factor: 400
