@@ -11,7 +11,7 @@ def generate_slurm_script(params: dict) -> str:
         lines.append(f"#SBATCH --{k}={v}")
     lines.append("")
     lines.append("cd /home/users/passow/cs224w/optimal-breaker-gnn")
-    lines.append("sbatch kedro run -p preprocess")
+    lines.append("kedro run -p preprocess")
 
     sh = "\n".join(lines)
 
