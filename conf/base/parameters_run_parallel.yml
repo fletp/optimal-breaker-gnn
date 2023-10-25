@@ -9,6 +9,7 @@ slurm:
   n_runs: 10
   sbatch:
     job-name: hello-world
+    partition: ramr
     ntasks: 4
     time: "1:00:00"
     mem: 500
