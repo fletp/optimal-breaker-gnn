@@ -30,3 +30,8 @@ optim_res_dict:
   type: pickle.PickleDataSet
   filepath: data/03_primary/optim_res_dict.pickle
   versioned: True
+
+# Slurm scripts
+slurm_script:
+  type: text.TextDataSet
+  filepath: data/05_model_input/test_slurm.sh

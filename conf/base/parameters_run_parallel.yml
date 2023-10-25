@@ -3,3 +3,13 @@
 #
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
+
+slurm:
+  dry: True
+  n_runs: 10
+  sbatch:
+    job-name: hello-world
+    ntasks: 4
+    time: "1:00:00"
+    mem: 500
+    nodes: 1
