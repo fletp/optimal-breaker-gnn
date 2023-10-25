@@ -12,5 +12,5 @@ slurm:
     partition: ramr
     ntasks: 4
     time: "1:00:00"
-    mem: 500
+    mem: 4g
     nodes: 1
