@@ -10,7 +10,7 @@ slurm:
   sbatch:
     job-name: hello-world
     partition: ramr
-    ntasks: 4
+    ntasks: 16
     time: "1:00:00"
     mem: 4000
     nodes: 1
