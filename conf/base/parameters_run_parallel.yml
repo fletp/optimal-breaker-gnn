@@ -6,6 +6,7 @@
 
 slurm:
   job-name: training-10
+  ruse: True
   logging:
     output: slurm_logs/*.%j.output
     error: slurm_logs/*.%j.error

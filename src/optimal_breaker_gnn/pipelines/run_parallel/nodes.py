@@ -18,8 +18,13 @@ def generate_slurm_script(params: dict) -> str:
     for k, v in params["resources"].items():
         lines.append(build_opt(k, v))
     lines.append("")
+    if params["ruse"]:
+        lines.append("module load system ruse")
+        cmd_prefix = "ruse" + " "
+    else:
+        cmd_prefix = ""
     lines.append("cd /home/users/passow/cs224w/optimal-breaker-gnn")
-    lines.append("kedro run -p preprocess")
+    lines.append(f"{cmd_prefix}kedro run -p preprocess")
 
     sh = "\n".join(lines)
     return sh
