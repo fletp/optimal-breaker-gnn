@@ -8,10 +8,13 @@ slurm:
   job-name: train-10
   ruse: True
   logging:
-    output: slurm_logs/*.%j.output
-    error: slurm_logs/*.%j.error
+    output: slurm_logs/*.%j.out
+    error: slurm_logs/*.%j.err
   resources:
     partition: ramr
     mem: 16GB
     nodes: 1
     cpus-per-task: 6
+  kedro:
+    pipeline: preprocess
+    runner: ParallelRunner

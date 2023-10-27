@@ -24,7 +24,13 @@ def generate_slurm_script(params: dict) -> str:
     else:
         cmd_prefix = ""
     lines.append("cd /home/users/passow/cs224w/optimal-breaker-gnn")
-    lines.append(f"{cmd_prefix}kedro run -p preprocess")
+
+    cmds = []
+    for k, v in params["kedro"].items():
+        cmds.append(f"--{k}={v}")
+    cmd_opts = " ".join(cmds)
+
+    lines.append(f"{cmd_prefix}kedro run {cmd_opts}")
 
     sh = "\n".join(lines)
     return sh
