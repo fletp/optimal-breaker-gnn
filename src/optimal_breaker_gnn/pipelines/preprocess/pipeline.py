@@ -38,7 +38,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         ]
     )
 
-    n_examples = 10
+    n_examples = 100
     for p in range(n_examples):
         cur_pipe = pipeline(
             pipe=optim_pipe,
