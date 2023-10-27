@@ -5,12 +5,12 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 slurm:
-  dry: True
-  n_runs: 10
-  sbatch:
-    job-name: hello-world
+  job-name: training-10
+  logging:
+    output: slurm_logs/*.%j.output
+    error: slurm_logs/*.%j.error
+  resources:
     partition: ramr
-    ntasks: 16
-    time: "1:00:00"
-    mem: 4000
-    nodes: 1
+    mem: 16GB
+    nodes: 2
+    cpus-per-task: 6
