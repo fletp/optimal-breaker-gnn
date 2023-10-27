@@ -13,5 +13,5 @@ slurm:
   resources:
     partition: ramr
     mem: 16GB
-    nodes: 2
+    nodes: 1
     cpus-per-task: 6
