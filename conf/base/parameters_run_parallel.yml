@@ -5,16 +5,18 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 slurm:
-  job-name: train-10
   ruse: True
-  logging:
-    output: slurm_logs/*.%j.out
+  sbatch:
+    job-name: train-10
+    output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
-  resources:
+    mail-user: passow@stanford.edu
+    mail-type: BEGIN
     partition: ramr
     mem: 16GB
     nodes: 1
     cpus-per-task: 6
+    time: 1-00:00
   kedro:
     pipeline: preprocess
     runner: ParallelRunner
