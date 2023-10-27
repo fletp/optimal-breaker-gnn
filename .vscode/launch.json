@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: Current File",
             "type": "python",
@@ -21,6 +22,16 @@
             "args": ["run", "--pipeline", "preprocess"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
-        }
+        },
+        {
+            "name": "Kedro: Run Parallel",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--pipeline", "run_parallel"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
     ]
 }
