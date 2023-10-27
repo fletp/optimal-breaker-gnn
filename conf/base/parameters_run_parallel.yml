@@ -5,7 +5,7 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 slurm:
-  job-name: training-10
+  job-name: train-10
   ruse: True
   logging:
     output: slurm_logs/*.%j.output
