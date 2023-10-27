@@ -196,13 +196,25 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     # Make cvxpy variables concrete on the network
     for i, a in G.nodes(data=True):
         for k, v in a.items():
-            if type(v) == cp.Variable:
-                a[k] = v.value
+            if isinstance(v, cp.Expression):
+                val = v.value
+                if isinstance(val, np.ndarray) and val.ndim == 0:
+                    if np.issubdtype(val.dtype, np.floating):
+                        val = float(val)
+                    elif np.issubdtype(val.dtype, np.integer):
+                        val = int(val)
+                a[k] = val
 
     for i, j, a in G.edges(data=True):
         for k, v in a.items():
-            if type(v) == cp.Variable:
-                a[k] = v.value
+            if isinstance(v, cp.Expression):
+                val = v.value
+                if isinstance(val, np.ndarray) and val.ndim == 0:
+                    if np.issubdtype(val.dtype, np.floating):
+                        val = float(val)
+                    elif np.issubdtype(val.dtype, np.integer):
+                        val = int(val)
+                a[k] = val
     toc = time.perf_counter()
 
     res = {
