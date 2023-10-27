@@ -223,7 +223,7 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
 
     res = {
         "network": G,
-        "obj_val": lam.value,
+        "obj_val": float(lam.value),
         "time_elapsed": toc-tic,
         "platform": platform.platform()
     }
