@@ -11,7 +11,7 @@ slurm:
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
-    mail-type: BEGIN
+    mail-type: ALL
     partition: ramr
     mem: 16GB
     nodes: 1
