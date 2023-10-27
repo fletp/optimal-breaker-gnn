@@ -41,19 +41,20 @@ def randomize_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         seed = None
     else:
         seed = params["random_seed"]
+    rng = np.random.default_rng(seed=seed)
     G = create_loads(
         G,
         min=params["load_power"]["min_norm"],
         max=params["load_power"]["max_norm"],
         system_total_power=tot_power,
-        seed=seed,
+        rng=rng,
     )
     G = create_gens(
         G,
         min=params["gen_power"]["min_norm"],
         max=params["gen_power"]["max_norm"],
         system_total_power=tot_power,
-        seed=seed+1,
+        rng=rng,
     )
     G = create_capacities(
         G,
@@ -61,21 +62,26 @@ def randomize_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         max=params["capacity"]["max_norm"],
         capacity_multiplier=capacity_multiplier,
         interconnect_multiplier=params["capacity"]["interconnect_multiplier"],
-        seed=seed+2,
+        rng=rng,
     )
     G = create_reactances(
         G,
         min=params["reactance"]["min_norm"],
         max=params["reactance"]["max_norm"],
         interconnect_multiplier=params["reactance"]["interconnect_multiplier"],
-        seed=seed+3,
+        rng=rng,
     )
     return G
 
 
-def create_loads(G: nx.Graph, min: float, max: float, system_total_power: float, seed: int=None) -> nx.Graph:
+def create_loads(
+        G: nx.Graph,
+        min: float,
+        max: float,
+        system_total_power: float,
+        rng: np.random.Generator = np.random.default_rng()
+    ) -> nx.Graph:
     """Add loads to the network nodes."""
-    rng = np.random.default_rng(seed=seed)
     loads = rng.uniform(low=min, high=max, size=len(G.nodes))
     loads = loads / np.sum(loads) * system_total_power
     loads = {i+1:{"load":loads[i]} for i in np.arange(loads.shape[0])}
@@ -88,10 +94,9 @@ def create_gens(
         min: float,
         max: float,
         system_total_power: float,
-        seed: int=None,
+        rng: np.random.Generator = np.random.default_rng(),
     ) -> nx.Graph:
     """Add generations to the network nodes."""
-    rng = np.random.default_rng(seed=seed)
     gens = rng.uniform(low=min, high=max, size=len(G.nodes))
     gens = gens / np.sum(gens) * system_total_power
     gens = {i+1:{"genr":gens[i]} for i in np.arange(gens.shape[0])}
@@ -105,10 +110,9 @@ def create_capacities(
         max: float,
         capacity_multiplier: float,
         interconnect_multiplier: float,
-        seed: int=None,
+        rng: np.random.Generator = np.random.default_rng(),
     ) -> nx.Graph:
     """Add capacities to the network edges."""
-    rng = np.random.default_rng(seed=seed)
     for u, v, a in G.edges(data=True):
         if not a["is_breaker"]:
             cap = rng.uniform(low=min, high=max) * capacity_multiplier
@@ -123,10 +127,9 @@ def create_reactances(
         min: float,
         max: float,
         interconnect_multiplier: float,
-        seed: int=None,
+        rng: np.random.Generator = np.random.default_rng(),
     ) -> nx.Graph:
     """Add reactances to the network edges."""
-    rng = np.random.default_rng(seed=seed)
     for u, v, a in G.edges(data=True):
         if not a["is_breaker"]:
             react = rng.uniform(low=min, high=max)
