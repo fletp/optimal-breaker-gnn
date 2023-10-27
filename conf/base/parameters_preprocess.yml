@@ -9,7 +9,7 @@ network_scenario:
   scale_factor: 1000
   load_gen_factor: 10000
   flow_factor: 400
-  random_seed: 42
+  random_seed: None
   gen_power:
     min_norm: 0
     max_norm: 500

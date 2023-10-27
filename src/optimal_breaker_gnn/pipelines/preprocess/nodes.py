@@ -37,19 +37,23 @@ def randomize_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     """Add random load, generation, capacities, and reactances to the network."""
     tot_power = params["load_gen_factor"] / params["scale_factor"]
     capacity_multiplier = params["flow_factor"] / params["scale_factor"]
+    if params["random_seed"] == "None":
+        seed = None
+    else:
+        seed = params["random_seed"]
     G = create_loads(
         G,
         min=params["load_power"]["min_norm"],
         max=params["load_power"]["max_norm"],
         system_total_power=tot_power,
-        seed=params["random_seed"],
+        seed=seed,
     )
     G = create_gens(
         G,
         min=params["gen_power"]["min_norm"],
         max=params["gen_power"]["max_norm"],
         system_total_power=tot_power,
-        seed=params["random_seed"]+1,
+        seed=seed+1,
     )
     G = create_capacities(
         G,
@@ -57,14 +61,14 @@ def randomize_network_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         max=params["capacity"]["max_norm"],
         capacity_multiplier=capacity_multiplier,
         interconnect_multiplier=params["capacity"]["interconnect_multiplier"],
-        seed=params["random_seed"]+2,
+        seed=seed+2,
     )
     G = create_reactances(
         G,
         min=params["reactance"]["min_norm"],
         max=params["reactance"]["max_norm"],
         interconnect_multiplier=params["reactance"]["interconnect_multiplier"],
-        seed=params["random_seed"]+3,
+        seed=seed+3,
     )
     return G
 
