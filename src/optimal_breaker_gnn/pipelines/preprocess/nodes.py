@@ -272,3 +272,8 @@ def set_optim_vars(G: nx.DiGraph, mode: str) -> nx.DiGraph:
             a["flow"] = (G.nodes[u]["angle"] - G.nodes[v]["angle"]) / a["reactance"]
     
     return G
+
+
+def combine_optimized_networks(*args: Tuple[dict]) -> Tuple[dict]:
+    """Combine optimized networks together for saving."""
+    return args

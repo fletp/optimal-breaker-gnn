@@ -4,11 +4,12 @@ generated using Kedro 0.18.13
 """
 
 from kedro.pipeline import Pipeline, pipeline, node
-from .nodes import build_base_network, create_network_scenario, optimize_scenario
+from .nodes import build_base_network, create_network_scenario, optimize_scenario, combine_optimized_networks
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    pipe = pipeline(
+    pipe_ls = []
+    build_pipe = pipeline(
         [
             node(
                 func=build_base_network,
@@ -16,6 +17,12 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs="network_base",
                 name="build_base_network",
             ),
+        ]
+    )
+    pipe_ls.append(build_pipe)
+
+    optim_pipe = pipeline(
+        [
             node(
                 func=create_network_scenario,
                 inputs=["network_base", "params:network_scenario"],
@@ -30,4 +37,28 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
         ]
     )
-    return pipe
+
+    n_examples = 2
+    for p in range(n_examples):
+        cur_pipe = pipeline(
+            pipe=optim_pipe,
+            inputs={"network_base"},
+            parameters={"params:network_scenario", "params:optimize"},
+            namespace=f"run_{p}",
+        )
+        pipe_ls.append(cur_pipe)
+
+    
+    combine_pipe = pipeline(
+        [
+            node(
+                func=combine_optimized_networks,
+                inputs=[f"run_{p}.optim_res_dict" for p in range(n_examples)],
+                outputs="training_network_list",
+                name="combine_optimized_networks"
+            ),
+        ]
+    )
+    pipe_ls.append(combine_pipe)
+
+    return sum(pipe_ls)

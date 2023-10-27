@@ -31,6 +31,11 @@ optim_res_dict:
   filepath: data/03_primary/optim_res_dict.pickle
   versioned: True
 
+training_network_list:
+  type: pickle.PickleDataSet
+  filepath: data/04_feature/training_network_list.pickle
+  versioned: True
+
 # Slurm scripts
 slurm_script:
   type: text.TextDataSet
