@@ -14,8 +14,7 @@ slurm:
     mail-type: ALL
     partition: ramr
     mem: 16GB
-    nodes: 1
-    cpus-per-task: 32
+    cpus-per-task: 10
     time: 1-00:00
   kedro:
     pipeline: preprocess
