@@ -7,16 +7,16 @@
 slurm:
   ruse: True
   sbatch:
-    job-name: train-100
+    job-name: train-2
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
     mail-type: ALL
     partition: ramr
-    mem: 16GB
+    mem: 6GB
     ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
-    cpus-per-task: 2
-    time: 3-00:00
+    cpus-per-task: 10
+    time: 1-00:00
   kedro:
     pipeline: preprocess
     runner: SequentialRunner
