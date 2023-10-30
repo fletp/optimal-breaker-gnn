@@ -7,7 +7,7 @@
 slurm:
   ruse: True
   sbatch:
-    job-name: train-2
+    job-name: train-10
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
