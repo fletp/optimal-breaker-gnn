@@ -14,6 +14,7 @@ slurm:
     mail-type: ALL
     partition: ramr
     mem: 16GB
+    ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
     cpus-per-task: 2
     time: 3-00:00
     array: 1-6
