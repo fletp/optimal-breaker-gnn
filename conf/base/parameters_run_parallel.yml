@@ -5,7 +5,7 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 slurm:
-  ruse: True
+  ruse: False
   sbatch:
     job-name: train-10
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
