@@ -13,7 +13,7 @@ slurm:
     mail-user: passow@stanford.edu
     mail-type: ALL
     partition: ramr
-    mem: 16GB
+    mem: 32GB
     ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
     cpus-per-task: 10
     time: 1-00:00
