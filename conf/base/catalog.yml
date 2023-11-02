@@ -40,3 +40,35 @@ training_network_list:
 slurm_script:
   type: text.TextDataSet
   filepath: data/05_model_input/test_slurm.sh
+
+# Training pipeline
+training_network_partitions:
+  type: PartitionedDataset
+  path: data/04_feature/training_network_list.pickle
+  dataset: pickle.PickleDataSet
+
+training_networks:
+  type: pickle.PickleDataSet
+  filepath: data/04_feature/training_networks.pickle
+
+training_networks_augmented:
+  type: MemoryDataset
+
+heterodata:
+  type: pickle.PickleDataSet
+  filepath: data/05_model_input/heterodata.pickle
+
+dataloaders:
+  type: pickle.PickleDataSet
+  filepath: data/05_model_input/dataloaders.pickle
+  versioned: true
+
+trained_model_best:
+  type: pickle.PickleDataSet
+  filepath: data/05_model_input/trained_model_best.pickle
+  versioned: true
+
+training_logs:
+  type: pickle.PickleDataSet
+  filepath: data/05_model_input/training_logs.pickle
+  versioned: true

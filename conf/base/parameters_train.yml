@@ -1,0 +1,40 @@
+# This is a boilerplate parameters config generated for pipeline 'train'
+# using Kedro 0.18.13.
+#
+# Documentation for this file format can be found in "Parameters"
+# Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
+
+dataloaders:
+  splits:
+    train:
+      frac: 0.7
+      batch_size: 2
+      shuffle: True
+    valid:
+      frac: 0.2
+      batch_size: 1
+      shuffle: False
+    test:
+      frac: 0.1
+      batch_size: 1
+      shuffle: False
+  seed: 42
+
+platform:
+  device: cpu
+
+structure:
+  num_layers: 3
+  num_heads: 2
+  hidden_dim: 256
+  output_dim: 1
+  node_types:
+    - 'busbar'
+    - 'breaker'
+    - 'branch'
+  metadata: (['busbar', 'breaker', 'branch'],
+                [('busbar', 'breaker', 'breaker'), ('breaker', 'breaker', 'busbar'),
+                ('busbar', 'branch', 'branch'),('branch', 'branch', 'busbar')]), 
+  dropout: 0.5
+  lr: 0.01
+  epochs: 50
