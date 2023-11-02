@@ -5,13 +5,13 @@ from torch_geometric.nn import HGTConv, Linear
 
 
 class HGT_Model(torch.nn.Module):
-    def __init__(self, hidden_dim, output_dim, node_types, metadata, num_layers, num_heads, dropout):
+    def __init__(self, hidden_dim, output_dim, metadata, num_layers, num_heads, dropout):
 
         super().__init__()
         
         self.num_layers = num_layers
         self.lin_dict = torch.nn.ModuleDict()
-        for node_type in node_types:
+        for node_type in metadata[0]:
             self.lin_dict[node_type] = Linear(-1, hidden_dim)
             
         self.convs = torch.nn.ModuleList()

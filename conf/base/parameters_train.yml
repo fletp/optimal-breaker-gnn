@@ -28,13 +28,6 @@ structure:
   num_heads: 2
   hidden_dim: 256
   output_dim: 1
-  node_types:
-    - 'busbar'
-    - 'breaker'
-    - 'branch'
-  metadata: (['busbar', 'breaker', 'branch'],
-                [('busbar', 'breaker', 'breaker'), ('breaker', 'breaker', 'busbar'),
-                ('busbar', 'branch', 'branch'),('branch', 'branch', 'busbar')]), 
   dropout: 0.5
   lr: 0.01
   epochs: 50

@@ -26,7 +26,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=build_heterograph_datasets,
                 inputs="training_networks_augmented",
-                outputs="heterodata",
+                outputs=["heterodata", "graph_metadata"],
                 name="build_heterograph_datasets",
             ),
             node(
@@ -37,7 +37,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train_model,
-                inputs=["dataloaders", "params:structure", "params:platform"],
+                inputs=["dataloaders", "graph_metadata", "params:structure", "params:platform"],
                 outputs=["trained_model_best", "training_logs"],
                 name="train_model",
             ),

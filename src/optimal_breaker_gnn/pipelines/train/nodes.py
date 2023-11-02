@@ -11,7 +11,7 @@ import torch
 import copy
 from .model import train, evaluate, HGT_Model
 import torch.nn as nn
-from typing import Tuple, Callable
+from typing import Tuple, Callable, List
 from torch.utils.data import random_split
 
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
@@ -54,8 +54,11 @@ def alter_graph(G: nx.DiGraph) -> nx.DiGraph:
     return G
 
 def build_heterograph_datasets(G_ls: list[nx.DiGraph]) -> list[HeteroData]:
-    result = [to_heterograph(G) for G in G_ls]
-    return result
+    data = [to_heterograph(G) for G in G_ls]
+    metadata = (['busbar', 'breaker', 'branch'],
+                [('busbar', 'breaker', 'breaker'), ('breaker', 'breaker', 'busbar'),
+                ('busbar', 'branch', 'branch'),('branch', 'branch', 'busbar')])
+    return data, metadata
 
 def to_heterograph(G):
     df_nodes = pd.DataFrame.from_dict(G.nodes, orient='index')
@@ -70,7 +73,6 @@ def to_heterograph(G):
     df_edges = df_edges.merge(df_nodes[["node_id", "new_index"]], how="left", left_on = ["source"], right_on = ["node_id"])
     df_edges = df_edges.merge(df_nodes[["node_id", "new_index"]], how="left", left_on = ["target"], right_on = ["node_id"])
     df_edges = df_edges.rename(columns = {"new_index_x": "new_source", "new_index_y": "new_target"})
-    n = G.number_of_nodes()
     
     data = HeteroData()
     data['busbar'].node_id = torch.from_numpy(df_nodes[df_nodes['is_breaker'].isnull()].index.values)
@@ -109,12 +111,11 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
     return loaders
 
 
-def train_model(loaders: dict, params_struct: dict, params_device: dict):
+def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, str]]], params_struct: dict, params_device: dict):
     model = HGT_Model(
         params_struct['hidden_dim'],
         params_struct['output_dim'],
-        params_struct['node_types'],
-        params_struct['metadata'],
+        metadata,
         params_struct['num_layers'],
         params_struct['num_heads'],
         params_struct['dropout']).to(params_device['device'])
