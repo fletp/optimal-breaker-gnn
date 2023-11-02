@@ -73,6 +73,6 @@ trained_model_best:
   versioned: true
 
 training_logs:
-  type: pickle.PickleDataSet
-  filepath: data/05_model_input/training_logs.pickle
+  type: pandas.CSVDataSet
+  filepath: data/05_model_input/training_logs.csv
   versioned: true
