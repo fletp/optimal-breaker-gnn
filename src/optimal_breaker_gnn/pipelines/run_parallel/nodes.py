@@ -31,21 +31,8 @@ def generate_slurm_script(params: dict) -> str:
     cmd_opts = " ".join(cmds)
     cmds = f"{cmd_prefix}kedro run {cmd_opts}"
 
-    email_command_str = """
-secs_to_human(){
-echo "$(( ${1} / 3600 )):$(( (${1} / 60) % 60 )):$(( ${1} % 60 ))"
-}
-start=$(date +%s)
-echo "$(date -d @${start} "+%Y-%m-%d %H:%M:%S"): ${SLURM_JOB_NAME} start id=${SLURM_JOB_ID}\n"
-
-### exec task here
-( << replace with your task here >> ) \
-&& (cat JOB$SLURM_JOB_ID.out |mail -s "$SLURM_JOB_NAME Ended after $(secs_to_human $(($(date +%s) - ${start}))) id=$SLURM_JOB_ID" my@email.com && echo mail sended) \
-|| (cat JOB$SLURM_JOB_ID.out |mail -s "$SLURM_JOB_NAME Failed after $(secs_to_human $(($(date +%s) - ${start}))) id=$SLURM_JOB_ID" my@email.com && echo mail sended && exit $?)"""
-
-    email_command_str = email_command_str.replace("<< replace with your task here >>", cmds)
-
-    lines.append(email_command_str)
+    cmds_ls = [cmds] * params["n_sequential_jobs"]
+    lines.extend(cmds_ls)
 
     sh = "\n".join(lines)
     return sh

@@ -8,6 +8,7 @@ import numpy as np
 import cvxpy as cp
 import time
 import platform
+from datetime import datetime
 from typing import Tuple
 
 def build_base_network(nodes: pd.DataFrame, edges: pd.DataFrame) -> nx.Graph:
@@ -230,7 +231,8 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
         "time_elapsed": toc-tic,
         "platform": platform.platform()
     }
-    return res
+    cur_time = datetime.now().strftime(params["file_dir_time_format"])
+    return {f"{cur_time}/{params['file_basename']}":res}
 
 
 def get_in_out_edges(G: nx.DiGraph, v) -> list[Tuple]:
@@ -272,8 +274,3 @@ def set_optim_vars(G: nx.DiGraph, mode: str) -> nx.DiGraph:
             a["flow"] = (G.nodes[u]["angle"] - G.nodes[v]["angle"]) / a["reactance"]
     
     return G
-
-
-def combine_optimized_networks(*args: Tuple[dict]) -> Tuple[dict]:
-    """Combine optimized networks together for saving."""
-    return args

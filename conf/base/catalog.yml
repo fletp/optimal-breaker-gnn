@@ -27,9 +27,10 @@ network_scenario:
 
 # Optimization results
 optim_res_dict:
-  type: pickle.PickleDataSet
-  filepath: data/03_primary/optim_res_dict.pickle
-  versioned: True
+  type: PartitionedDataset
+  path: data/03_primary/optim_res_dict
+  dataset: pickle.PickleDataSet
+  filename_suffix: .pickle
 
 training_network_list:
   type: pickle.PickleDataSet
