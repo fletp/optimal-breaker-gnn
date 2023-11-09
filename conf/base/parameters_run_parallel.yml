@@ -7,7 +7,7 @@
 slurm:
   ruse: False
   sbatch:
-    job-name: train-200
+    job-name: train-300
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
@@ -18,7 +18,7 @@ slurm:
     cpus-per-task: 10
     time: 2-00:00
     array: 1-2
-  n_sequential_jobs: 200
+  n_sequential_jobs: 300
   kedro:
     pipeline: preprocess
     runner: SequentialRunner
