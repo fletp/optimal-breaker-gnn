@@ -16,7 +16,7 @@ slurm:
     mem: 32GB
     ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
     cpus-per-task: 10
-    time: 1-00:00
+    time: 2-00:00
     array: 1-2
   n_sequential_jobs: 200
   kedro:
