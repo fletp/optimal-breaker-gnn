@@ -12,12 +12,12 @@ slurm:
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
     mail-type: ALL
-    partition: ramr
+    partition: serc
     mem: 32GB
     ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
     cpus-per-task: 10
     time: 2-00:00
-    array: 1-2
+    array: 1-3
   n_sequential_jobs: 300
   kedro:
     pipeline: preprocess
