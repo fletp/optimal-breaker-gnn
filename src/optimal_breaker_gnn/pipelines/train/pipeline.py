@@ -5,7 +5,15 @@ generated using Kedro 0.18.13
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import augment_graphs, build_heterograph_datasets, build_dataloaders, train_model, join_partitions, eval_preds_by_optim
+from .nodes import (
+    augment_graphs,
+    build_heterograph_datasets,
+    build_dataloaders,
+    train_model,
+    join_partitions,
+    apply_preds_to_networks,
+    eval_preds_by_optim,
+)
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -32,7 +40,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=build_dataloaders,
                 inputs=["heterodata", "params:dataloaders"],
-                outputs="dataloaders",
+                outputs=["dataloaders", "splits"],
                 name="build_dataloaders",
             ),
             node(
@@ -42,8 +50,14 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="train_model",
             ),
             node(
+                func=apply_preds_to_networks,
+                inputs=["trained_model_best", "heterodata", "splits", "training_networks_augmented", "training_networks", "params:predict"],
+                outputs="prediction_networks",
+                name="apply_preds_to_networks",
+            ),
+            node(
                 func=eval_preds_by_optim,
-                inputs=["training_networks", "params:optimize"],
+                inputs=["prediction_networks", "params:optimize"],
                 outputs="violations",
                 name="eval_preds_by_optim",
             ),

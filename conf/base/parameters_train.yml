@@ -8,15 +8,15 @@ dataloaders:
   splits:
     train:
       frac: 0.7
-      batch_size: 2
+      batch_size: 25
       shuffle: True
     valid:
       frac: 0.2
-      batch_size: 1
+      batch_size: 25
       shuffle: False
     test:
       frac: 0.1
-      batch_size: 1
+      batch_size: 25
       shuffle: False
   seed: 42
 
@@ -30,4 +30,7 @@ structure:
   output_dim: 1
   dropout: 0.5
   lr: 0.01
-  epochs: 50
+  epochs: 3
+
+predict:
+  subset: valid

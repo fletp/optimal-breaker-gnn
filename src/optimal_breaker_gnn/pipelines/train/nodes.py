@@ -15,7 +15,7 @@ import copy
 from optimal_breaker_gnn.models.gnn import train, evaluate, HGT_Model
 import torch.nn as nn
 from typing import Tuple, Callable, List
-from torch.utils.data import random_split
+from torch.utils.data import random_split, Subset
 from optimal_breaker_gnn.models.optim import define_problem, concretize_network_attrs
 
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
@@ -38,6 +38,7 @@ def alter_graph(G: nx.DiGraph) -> nx.DiGraph:
     for edge in edges:
         u, v = edge
         attr = G.get_edge_data(u, v)
+        attr.update({"src_targ":(u, v)})
         G.add_node(n + i)
         node_attr = {n+i: attr}
         nx.set_node_attributes(G, node_attr)
@@ -66,6 +67,7 @@ def build_heterograph_datasets(G_ls: list[nx.DiGraph]) -> list[HeteroData]:
 
 def to_heterograph(G):
     df_nodes = pd.DataFrame.from_dict(G.nodes, orient='index')
+    df_nodes = df_nodes.drop(columns=["src_targ"])
     # Need to alter edge index source and target to refer to correct values
     # Node index for each type should start at 0 
     df_nodes["node_id"] = df_nodes.index.values
@@ -101,18 +103,18 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
 
     rng = torch.Generator().manual_seed(params["seed"])
     splits = random_split(data, lengths=split_fracs, generator=rng)
+    split_dict = {split_names[i]:splits[i] for i in range(len(split_names))}
 
     loaders = {}
-    for split_id in range(len(split_names)):
-        cur_name = split_names[split_id]
-        cur_data = [data[i] for i in splits[split_id].indices]
+    for name, sub in split_dict.items():
+        cur_data = [data[i] for i in sub.indices]
         loader = DataLoader(
             cur_data,
-            batch_size=params["splits"][cur_name]["batch_size"],
-            shuffle=params["splits"][cur_name]["shuffle"]
+            batch_size=params["splits"][name]["batch_size"],
+            shuffle=params["splits"][name]["shuffle"]
         )
-        loaders.update({cur_name: loader})
-    return loaders
+        loaders.update({name: loader})
+    return loaders, split_dict
 
 
 def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, str]]], params_struct: dict, params_device: dict):
@@ -162,14 +164,24 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
     return best_model, log_df
 
 
+def apply_preds_to_networks(model, heterodata:HeteroData, splits:list[Subset], augments:list[nx.DiGraph], networks:list[dict], params:dict) -> list[dict]:
+    """Apply predictions to networks."""
+    idx = splits[params["subset"]].indices
+    for i in idx: # Looping through networks
+        with torch.no_grad():
+            preds = torch.squeeze(model(heterodata[i])).round().cpu().detach().numpy()
+        networks[i]["network_pred"] = copy.deepcopy(networks[i]["network"])
+        for b in range(len(preds)): # Looping through predicted values / breakers
+            closed = preds[b]
+            aug_id = int(heterodata[i]["breaker"].node_id[b])
+            u, v = augments[i].nodes[aug_id]["src_targ"]
+            networks[i]["network_pred"].edges[u, v]["breaker_closed"] = closed
+    return [networks[i] for i in idx]
+
+
 def eval_preds_by_optim(networks:list[dict], params:dict) -> dict:
     """Evaluate predictions by optimization."""
-    for d in networks:
-        for u, v, a in d["network"].edges(data=True):
-            if a["is_breaker"]:
-                a["breaker_closed"] = 1
-
-    evals = [eval_single_pred(d["network"], params=params) for d in networks]
+    evals = [eval_single_pred(d["network_pred"], params=params) for d in networks]
     return evals
     
 
