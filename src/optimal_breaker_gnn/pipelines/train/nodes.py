@@ -164,15 +164,13 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
 
 def eval_preds_by_optim(networks:list[dict], params:dict) -> dict:
     """Evaluate predictions by optimization."""
-    test = networks[0]["network"]
-    for u, v, a in test.edges(data=True):
-        if a["is_breaker"]:
-            a["breaker_closed"] = 0
+    for d in networks:
+        for u, v, a in d["network"].edges(data=True):
+            if a["is_breaker"]:
+                a["breaker_closed"] = 1
 
-    res = eval_single_pred(G=test, params=params)
-
-
-    return res
+    evals = [eval_single_pred(d["network"], params=params) for d in networks]
+    return evals
     
 
 def eval_single_pred(G:nx.DiGraph, params:dict) -> dict:
@@ -180,12 +178,20 @@ def eval_single_pred(G:nx.DiGraph, params:dict) -> dict:
     tic = time.perf_counter()
     prob = define_problem(G=G, mode="eval", params=params)
     prob.solve(solver=cp.XPRESS, verbose=True)
-    G = concretize_network_attrs(G)
     toc = time.perf_counter()
+    cnstrs = prob.constraints
+    viols = [not c.value() for c in cnstrs]
+    n_viols = sum(viols)
+
+    tic_1 = time.perf_counter()
+    G = concretize_network_attrs(G)
+    toc_1 = time.perf_counter()
+
     res = {
         "network": G,
         "obj_val": float(prob.objective.value),
-        "time_elapsed": toc-tic,
+        "time_elapsed": toc-tic+toc_1-tic_1,
+        "num_viols": n_viols,
         "platform": platform.platform()
     }
     return res
