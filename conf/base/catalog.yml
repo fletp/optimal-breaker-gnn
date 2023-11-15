@@ -70,10 +70,12 @@ dataloaders:
 
 trained_model_best:
   type: pickle.PickleDataSet
-  filepath: data/05_model_input/trained_model_best.pickle
+  filepath: data/06_models/trained_model_best.pickle
   versioned: true
 
 training_logs:
   type: pandas.CSVDataSet
-  filepath: data/05_model_input/training_logs.csv
+  filepath: data/06_models/training_logs.csv
+  versioned: true
+
   versioned: true
