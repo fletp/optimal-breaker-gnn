@@ -2,17 +2,21 @@
 This is a boilerplate pipeline 'train'
 generated using Kedro 0.18.13
 """
+import cvxpy as cp
 import networkx as nx
 import pandas as pd
 import numpy as np
+import time
+import platform
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 import torch
 import copy
-from .model import train, evaluate, HGT_Model
+from optimal_breaker_gnn.models.gnn import train, evaluate, HGT_Model
 import torch.nn as nn
 from typing import Tuple, Callable, List
 from torch.utils.data import random_split
+from optimal_breaker_gnn.models.optim import define_problem, concretize_network_attrs
 
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
     compiled = []
@@ -156,3 +160,33 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
             f'Test: {100 * test_acc:.2f}%')
     log_df = pd.DataFrame(logs)
     return best_model, log_df
+
+
+def eval_preds_by_optim(networks:list[dict], params:dict) -> dict:
+    """Evaluate predictions by optimization."""
+    test = networks[0]["network"]
+    for u, v, a in test.edges(data=True):
+        if a["is_breaker"]:
+            a["breaker_closed"] = 0
+
+    res = eval_single_pred(G=test, params=params)
+
+
+    return res
+    
+
+def eval_single_pred(G:nx.DiGraph, params:dict) -> dict:
+    """Evaluate a single prediction using optimization."""
+    tic = time.perf_counter()
+    prob = define_problem(G=G, mode="eval", params=params)
+    prob.solve(solver=cp.XPRESS, verbose=True)
+    G = concretize_network_attrs(G)
+    toc = time.perf_counter()
+    res = {
+        "network": G,
+        "obj_val": float(prob.objective.value),
+        "time_elapsed": toc-tic,
+        "platform": platform.platform()
+    }
+    return res
+

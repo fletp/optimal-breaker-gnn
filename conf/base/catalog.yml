@@ -78,4 +78,8 @@ training_logs:
   filepath: data/06_models/training_logs.csv
   versioned: true
 
+# Evaluation
+violations:
+  type: pickle.PickleDataSet
+  filepath: data/07_model_output/violations.pickle
   versioned: true
