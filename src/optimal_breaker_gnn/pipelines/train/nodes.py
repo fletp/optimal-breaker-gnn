@@ -62,9 +62,7 @@ def alter_graph(G: nx.DiGraph) -> nx.DiGraph:
 
 def build_heterograph_datasets(G_ls: list[nx.DiGraph]) -> list[HeteroData]:
     data = [to_heterograph(G) for G in G_ls]
-    metadata = (['busbar', 'breaker', 'branch'],
-                [('busbar', 'breaker', 'breaker'), ('breaker', 'breaker', 'busbar'),
-                ('busbar', 'branch', 'branch'),('branch', 'branch', 'busbar')])
+    metadata = data[0].metadata()
     return data, metadata
 
 def to_heterograph(G):
