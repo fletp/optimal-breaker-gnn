@@ -138,9 +138,10 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
         loss = train(model, params_device['device'], loaders["train"], optimizer, loss_fn)
 
         print('Evaluating...')
-        train_acc = evaluate(model, params_device['device'], loaders["train"], loss_fn)
-        valid_acc = evaluate(model, params_device['device'], loaders["valid"], loss_fn)
-        test_acc  = evaluate(model, params_device['device'], loaders["test"], loss_fn)
+        train_acc, train_ones = evaluate(model, params_device["device"], loaders["train"], loss_fn)
+        valid_acc, valid_ones = evaluate(model, params_device["device"], loaders["valid"], loss_fn)
+        test_acc, test_ones = evaluate(model, params_device["device"], loaders["test"], loss_fn)
+
 
         if valid_acc > best_valid_acc:
             best_valid_acc = valid_acc
@@ -153,13 +154,19 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
                 'train_acc': train_acc,
                 'validation_acc': valid_acc,
                 'test_acc': test_acc,
+                'train_ones': train_ones,
+                'validation_ones': valid_ones,
+                'test_ones': test_ones,
             }
         )
         print(f'Epoch: {epoch:02d}, '
             f'Loss: {loss:.4f}, '
             f'Train: {100 * train_acc:.2f}%, '
             f'Valid: {100 * valid_acc:.2f}% '
-            f'Test: {100 * test_acc:.2f}%')
+            f'Test: {100 * test_acc:.2f}%'
+            f'Train % Ones: {100 * train_ones:.2f}%, '
+            f'Valid % Ones: {100 * valid_ones:.2f}%, '
+            f'Test % Ones: {100 * test_ones:.2f}%')
     log_df = pd.DataFrame(logs)
     return best_model, log_df
 

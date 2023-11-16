@@ -77,17 +77,21 @@ def evaluate(model, device, data_loader, loss_fn):
     
     correct = 0
     total = 0
+    num_ones = 0
+    num_total = 0
     for step, batch in enumerate(data_loader):
         batch = batch.to(device)
         if batch['busbar'].x[0].shape[0] == 1:
             pass
         else:
             with torch.no_grad():
-                y_pred = torch.squeeze(model(batch)).round().cpu().detach().numpy()
+                y_pred = F.sigmoid(torch.squeeze(model(batch))).round().cpu().detach().numpy()
             y_true = batch['breaker'].y.cpu().detach().numpy()
+            num_ones += y_pred.sum()
+            num_total += len(y_pred)
             total += len(y_true)
             correct += sum(y_true == y_pred)
 
-    return correct / total
+    return (correct/total, num_ones/num_total)
 
 
