@@ -11,6 +11,7 @@ import platform
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
 import torch.nn.functional as F
+import torch_geometric.transforms as T
 import torch
 import copy
 from optimal_breaker_gnn.models.gnn import train, evaluate, HGT_Model
@@ -90,12 +91,14 @@ def to_heterograph(G):
     data['branch'].node_id = torch.from_numpy(df_nodes[df_nodes["is_breaker"] == False].index.values)
     data['branch'].x = torch.from_numpy(df_nodes[df_nodes['is_breaker'] == False][["reactance", "capacity"]].values).to(torch.float32)
     
-    data['busbar', 'breaker', 'breaker'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_breaker"][["new_source", "new_target"]].values)) 
-    data['breaker', 'breaker', 'busbar'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "breaker_busbar"][["new_source", "new_target"]].values))
-    data['busbar', 'branch', 'branch'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_branch"][["new_source", "new_target"]].values))
-    data['branch', 'branch', 'busbar'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "branch_busbar"][["new_source", "new_target"]].values))
-    data['busbar', 'branch', 'branch'].edge_attr = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_branch"][["reactance", "capacity"]].values)).to(torch.float32) 
-    data['branch', 'branch', 'busbar'].edge_attr = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "branch_busbar"][["reactance", "capacity"]].values)).to(torch.float32)
+    data['busbar', 'switched_by', 'breaker'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_breaker"][["new_source", "new_target"]].values)) 
+    data['breaker', 'switches', 'busbar'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "breaker_busbar"][["new_source", "new_target"]].values))
+    data['busbar', 'connected_by', 'branch'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_branch"][["new_source", "new_target"]].values))
+    data['branch', 'connects', 'busbar'].edge_index = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "branch_busbar"][["new_source", "new_target"]].values))
+    data['busbar', 'connected_by', 'branch'].edge_attr = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "busbar_branch"][["reactance", "capacity"]].values)).to(torch.float32) 
+    data['branch', 'connects', 'busbar'].edge_attr = torch.t(torch.from_numpy(df_edges[df_edges["edge_type"] == "branch_busbar"][["reactance", "capacity"]].values)).to(torch.float32)
+
+    data = T.ToUndirected()(data)
     return data
 
 def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
