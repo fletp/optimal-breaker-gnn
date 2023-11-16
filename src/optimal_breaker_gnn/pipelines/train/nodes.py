@@ -167,11 +167,9 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
         print(f'Epoch: {epoch:02d}, '
             f'Loss: {loss:.4f}, '
             f'Train: {100 * train_acc:.2f}%, '
-            f'Valid: {100 * valid_acc:.2f}% '
-            f'Test: {100 * test_acc:.2f}%'
+            f'Valid: {100 * valid_acc:.2f}%, '
             f'Train % Ones: {100 * train_ones:.2f}%, '
-            f'Valid % Ones: {100 * valid_ones:.2f}%, '
-            f'Test % Ones: {100 * test_ones:.2f}%')
+            f'Valid % Ones: {100 * valid_ones:.2f}%')
     log_df = pd.DataFrame(logs)
     return best_model, log_df
 
