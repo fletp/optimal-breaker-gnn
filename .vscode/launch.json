@@ -39,7 +39,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "train", "--from-nodes", "apply_preds_to_networks"]
+            "args": ["run", "--pipeline", "train"]
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
