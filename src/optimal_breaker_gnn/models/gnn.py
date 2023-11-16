@@ -5,7 +5,7 @@ from torch_geometric.nn import HGTConv, Linear
 
 
 class HGT_Model(torch.nn.Module):
-    def __init__(self, hidden_dim, output_dim, metadata, num_layers, num_heads, dropout):
+    def __init__(self, hidden_dim, output_dim, metadata, num_layers, num_heads, dropout, gain, bias):
 
         super().__init__()
         
@@ -24,7 +24,11 @@ class HGT_Model(torch.nn.Module):
         
         self.linear = Linear(-1, output_dim)
         self.dropout = dropout
-        self.sigmoid = nn.Sigmoid()
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                torch.nn.init.xavier_normal_(m.weight, gain=gain)
+                m.bias.data.fill_(bias)
 
     def reset_parameters(self):
         for node_type in self.lin_dict:
