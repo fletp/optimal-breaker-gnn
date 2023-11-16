@@ -32,7 +32,7 @@ structure:
   gain: 1
   bias: 0.01
   lr: 0.01
-  epochs: 3
+  epochs: 50
 
 predict:
   subset: valid
