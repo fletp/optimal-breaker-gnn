@@ -10,6 +10,7 @@ import time
 import platform
 from torch_geometric.data import HeteroData
 from torch_geometric.loader import DataLoader
+import torch.nn.functional as F
 import torch
 import copy
 from optimal_breaker_gnn.models.gnn import train, evaluate, HGT_Model
@@ -84,7 +85,7 @@ def to_heterograph(G):
     data['busbar'].node_id = torch.from_numpy(df_nodes[df_nodes['is_breaker'].isnull()].index.values)
     data['busbar'].x = torch.from_numpy(df_nodes[df_nodes['is_breaker'].isnull()][["load", "genr"]].values).to(torch.float32)
     data['breaker'].node_id = torch.from_numpy(df_nodes[df_nodes["is_breaker"] == True].index.values)
-    data['breaker'].x = torch.from_numpy(df_nodes[df_nodes['is_breaker'] == True][["is_breaker"]].values.astype(int)).to(torch.float32)
+    data['breaker'].x = torch.from_numpy(np.random.normal(size=(len(df_nodes[df_nodes['is_breaker'] == True]), 5))).to(torch.float32)
     data['breaker'].y = torch.from_numpy(df_nodes[df_nodes["is_breaker"] == True]["breaker_closed"].values.astype(int)).to(torch.float32)
     data['branch'].node_id = torch.from_numpy(df_nodes[df_nodes["is_breaker"] == False].index.values)
     data['branch'].x = torch.from_numpy(df_nodes[df_nodes['is_breaker'] == False][["reactance", "capacity"]].values).to(torch.float32)
@@ -124,10 +125,13 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
         metadata,
         params_struct['num_layers'],
         params_struct['num_heads'],
-        params_struct['dropout']).to(params_device['device'])
+        params_struct['dropout'],
+        params_struct["gain"],
+        params_struct["bias"],
+        ).to(params_device['device'])
 
     optimizer = torch.optim.Adam(model.parameters(), lr=params_struct['lr'])
-    loss_fn =  nn.BCELoss()
+    loss_fn =  nn.BCEWithLogitsLoss()
 
     best_model = None
     best_valid_acc = 0
@@ -176,7 +180,7 @@ def apply_preds_to_networks(model, heterodata:HeteroData, splits:list[Subset], a
     idx = splits[params["subset"]].indices
     for i in idx: # Looping through networks
         with torch.no_grad():
-            preds = torch.squeeze(model(heterodata[i])).round().cpu().detach().numpy()
+            preds = F.sigmoid(torch.squeeze(model(heterodata[i]))).round().cpu().detach().numpy()
         networks[i]["network_pred"] = copy.deepcopy(networks[i]["network"])
         for b in range(len(preds)): # Looping through predicted values / breakers
             closed = preds[b]

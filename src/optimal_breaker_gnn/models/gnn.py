@@ -53,7 +53,7 @@ class HGT_Model(torch.nn.Module):
             for node_type, x in x_dict.items()} 
             
         x = x_dict['breaker']
-        out = self.sigmoid(self.linear(x))
+        out = self.linear(x)
             
         return out
     
