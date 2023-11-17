@@ -160,3 +160,6 @@ venv.bak/
 
 ## Project files
 *.ipynb
+
+### Project-specific
+stats.json
