@@ -32,22 +32,12 @@ optim_res_dict:
   dataset: pickle.PickleDataSet
   filename_suffix: .pickle
 
-training_network_list:
-  type: pickle.PickleDataSet
-  filepath: data/04_feature/training_network_list.pickle
-  versioned: True
-
 # Slurm scripts
 slurm_script:
   type: text.TextDataSet
   filepath: data/05_model_input/test_slurm.sh
 
 # Training pipeline
-training_network_partitions:
-  type: PartitionedDataset
-  path: data/04_feature/training_network_list.pickle
-  dataset: pickle.PickleDataSet
-
 training_networks:
   type: pickle.PickleDataSet
   filepath: data/04_feature/training_networks.pickle
@@ -78,6 +68,18 @@ trained_model_best:
   type: pickle.PickleDataSet
   filepath: data/06_models/trained_model_best.pickle
   versioned: true
+
+best_metrics:
+  type: tracking.MetricsDataSet
+  filepath: data/09_tracking/metrics.json
+
+params_struct:
+  type: tracking.JSONDataSet
+  filepath: data/09_tracking/structure.json
+
+params_dataloaders:
+  type: tracking.JSONDataSet
+  filepath: data/09_tracking/dataloaders.json
 
 training_logs:
   type: pandas.CSVDataSet

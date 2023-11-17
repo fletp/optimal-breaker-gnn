@@ -21,7 +21,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=join_partitions,
-                inputs="training_network_partitions",
+                inputs="optim_res_dict",
                 outputs="training_networks",
                 name="join_partitions",
             ),

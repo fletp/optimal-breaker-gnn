@@ -19,12 +19,16 @@ import torch.nn as nn
 from typing import Tuple, Callable, List
 from torch.utils.data import random_split, Subset
 from optimal_breaker_gnn.models.optim import define_problem, concretize_network_attrs
+from typing import Tuple
 
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
     compiled = []
     for partition_key, partition_load_func in sorted(partitions.items()):
         partition_data = partition_load_func()
-        compiled.extend(partition_data)
+        if isinstance(partition_data, Tuple):
+            compiled.extend(partition_data)
+        else:
+            compiled.append(partition_data)
     return compiled
 
 
