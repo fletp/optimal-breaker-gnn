@@ -10,7 +10,7 @@ dataloaders:
       frac: 0.7
       batch_size: 25
       shuffle: True
-      n_examples_from_frac: 1
+      n_examples_from_frac: 10
     valid:
       frac: 0.2
       batch_size: 25
@@ -35,7 +35,7 @@ structure:
   gain: 1
   bias: 0.01
   lr: 0.01
-  epochs: 50
+  epochs: 3
 
 predict:
   subset: valid

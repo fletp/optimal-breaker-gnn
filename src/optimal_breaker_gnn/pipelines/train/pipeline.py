@@ -6,11 +6,8 @@ generated using Kedro 0.18.13
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import (
-    augment_graphs,
-    build_heterograph_datasets,
     build_dataloaders,
     train_model,
-    join_partitions,
     apply_preds_to_networks,
     eval_preds_by_optim,
 )
@@ -19,24 +16,6 @@ from .nodes import (
 def create_pipeline(**kwargs) -> Pipeline:
     pipe = pipeline(
         [
-            node(
-                func=join_partitions,
-                inputs="optim_res_dict",
-                outputs="training_networks",
-                name="join_partitions",
-            ),
-            node(
-                func=augment_graphs,
-                inputs="training_networks",
-                outputs="training_networks_augmented",
-                name="augment_graphs",
-            ),
-            node(
-                func=build_heterograph_datasets,
-                inputs="training_networks_augmented",
-                outputs=["heterodata", "graph_metadata"],
-                name="build_heterograph_datasets",
-            ),
             node(
                 func=build_dataloaders,
                 inputs=["heterodata", "params:dataloaders"],

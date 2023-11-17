@@ -14,6 +14,16 @@
             "justMyCode": true
         },
         {
+            "name": "Kedro: Build Training Examples",
+            "type": "python",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "module": "kedro",
+            "args": ["run", "--pipeline", "build_training_examples"]
+            // Any other arguments should be passed as a comma-seperated-list
+            // e.g "args": ["run", "--pipeline", "pipeline_name"]
+        },
+        {
             "name": "Kedro: Preprocess",
             "type": "python",
             "request": "launch",
@@ -39,7 +49,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "module": "kedro",
-            "args": ["run", "--pipeline", "train"]
+            "args": ["run", "--pipeline", "train"] // 
             // Any other arguments should be passed as a comma-seperated-list
             // e.g "args": ["run", "--pipeline", "pipeline_name"]
         },
