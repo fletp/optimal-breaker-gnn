@@ -23,4 +23,4 @@ slurm:
     pipeline: train
     runner: SequentialRunner
     to-nodes: train_model
-    dataloaders.splits.train.n_examples_from_frac: "$SLURM_ARRAY_TASK_ID"
+    params: "dataloaders.splits.train.n_examples_from_frac:$SLURM_ARRAY_TASK_ID"
