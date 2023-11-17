@@ -40,13 +40,13 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=build_dataloaders,
                 inputs=["heterodata", "params:dataloaders"],
-                outputs=["dataloaders", "splits"],
+                outputs=["dataloaders", "splits", "param_dataloaders"],
                 name="build_dataloaders",
             ),
             node(
                 func=train_model,
                 inputs=["dataloaders", "graph_metadata", "params:structure", "params:platform"],
-                outputs=["trained_model_best", "training_logs"],
+                outputs=["trained_model_best", "best_metrics", "param_struct", "training_logs"],
                 name="train_model",
             ),
             node(

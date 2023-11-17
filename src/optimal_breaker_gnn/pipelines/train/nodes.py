@@ -117,7 +117,7 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
             shuffle=params["splits"][name]["shuffle"]
         )
         loaders.update({name: loader})
-    return loaders, split_dict
+    return loaders, split_dict, params
 
 
 def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, str]]], params_struct: dict, params_device: dict):
@@ -137,6 +137,7 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
 
     best_model = None
     best_valid_acc = 0
+    best_metrics = None
 
     logs = []
     for epoch in range(1, 1 + params_struct["epochs"]):
@@ -148,13 +149,7 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
         valid_acc, valid_ones = evaluate(model, params_device["device"], loaders["valid"], loss_fn)
         test_acc, test_ones = evaluate(model, params_device["device"], loaders["test"], loss_fn)
 
-
-        if valid_acc > best_valid_acc:
-            best_valid_acc = valid_acc
-            best_model = copy.deepcopy(model)
-        
-        logs.append(
-            {
+        log_dict = {
                 'epoch': epoch,
                 'loss': loss,
                 'train_acc': train_acc,
@@ -164,15 +159,23 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
                 'validation_ones': valid_ones,
                 'test_ones': test_ones,
             }
-        )
+        logs.append(log_dict)
+
         print(f'Epoch: {epoch:02d}, '
             f'Loss: {loss:.4f}, '
             f'Train: {100 * train_acc:.2f}%, '
             f'Valid: {100 * valid_acc:.2f}%, '
             f'Train % Ones: {100 * train_ones:.2f}%, '
-            f'Valid % Ones: {100 * valid_ones:.2f}%')
+            f'Valid % Ones: {100 * valid_ones:.2f}%'
+        )
+
+        if valid_acc > best_valid_acc:
+            best_valid_acc = valid_acc
+            best_model = copy.deepcopy(model)
+            best_metrics = copy.deepcopy(log_dict)
+        
     log_df = pd.DataFrame(logs)
-    return best_model, log_df
+    return best_model, best_metrics, params_struct, log_df
 
 
 def apply_preds_to_networks(model, heterodata:HeteroData, splits:list[Subset], augments:list[nx.DiGraph], networks:list[dict], params:dict) -> list[dict]:
