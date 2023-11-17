@@ -110,6 +110,7 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
     loaders = {}
     for name, sub in split_dict.items():
         cur_data = [data[i] for i in sub.indices]
+        cur_data = cur_data[:params["splits"][name]["n_examples_from_frac"]]
         loader = DataLoader(
             cur_data,
             batch_size=params["splits"][name]["batch_size"],
