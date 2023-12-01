@@ -50,14 +50,16 @@ heterodata:
   type: pickle.PickleDataSet
   filepath: data/05_model_input/heterodata.pickle
 
+example_heterograph:
+  type: pickle.PickleDataSet
+  filepath: data/05_model_input/example_heterograph.pickle
+
 graph_metadata:
   type: pickle.PickleDataSet
   filepath: data/05_model_input/graph_metadata.pickle
 
 dataloaders:
-  type: pickle.PickleDataSet
-  filepath: data/05_model_input/dataloaders.pickle
-  versioned: true
+  type: MemoryDataset
 
 splits:
   type: pickle.PickleDataSet

@@ -8,15 +8,19 @@ import pandas as pd
 import time
 import platform
 from torch_geometric.data import HeteroData
-from torch_geometric.loader import DataLoader
+from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import torch
 import copy
-from optimal_breaker_gnn.models.gnn import train, evaluate, HGT_Model
 import torch.nn as nn
 from typing import Tuple, List
 from torch.utils.data import random_split, Subset
 from optimal_breaker_gnn.models.optim import define_problem, concretize_network_attrs
+from deepsnap.batch import Batch
+from deepsnap.dataset import GraphDataset
+from optimal_breaker_gnn.models.hetero_gnn import train, evaluate, HeteroGNN
+from deepsnap.hetero_graph import HeteroGraph
+
 
 def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
     split_names = list(params["splits"].keys())
@@ -24,49 +28,48 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
 
     rng = torch.Generator().manual_seed(params["seed"])
     splits = random_split(data, lengths=split_fracs, generator=rng)
-    split_dict = {split_names[i]:splits[i] for i in range(len(split_names))}
+    split_dict = {split_names[i]:splits[i].indices for i in range(len(split_names))}
 
     loaders = {}
-    for name, sub in split_dict.items():
-        cur_data = [data[i] for i in sub.indices]
+    for name, idx in split_dict.items():
+        cur_data = data[idx]
         cur_data = cur_data[:params["splits"][name]["n_examples_from_frac"]]
         loader = DataLoader(
             cur_data,
             batch_size=params["splits"][name]["batch_size"],
-            shuffle=params["splits"][name]["shuffle"]
+            shuffle=params["splits"][name]["shuffle"],
+            collate_fn=Batch.collate(),
         )
         loaders.update({name: loader})
     return loaders, split_dict, params
 
 
-def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, str]]], params_struct: dict, params_device: dict):
-    model = HGT_Model(
-        params_struct['hidden_dim'],
-        params_struct['output_dim'],
-        metadata,
-        params_struct['num_layers'],
-        params_struct['num_heads'],
-        params_struct['dropout'],
-        params_struct["gain"],
-        params_struct["bias"],
-        ).to(params_device['device'])
+def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, params_train: dict):
+    model = HeteroGNN(
+        example_graph=example_graph,
+        params=params_struct,
+    ).to(params_train["device"])
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=params_struct['lr'])
-    loss_fn =  nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=params_train['lr'],
+        weight_decay=params_train["weight_decay"],
+    )
 
     best_model = None
     best_valid_acc = 0
     best_metrics = None
 
     logs = []
-    for epoch in range(1, 1 + params_struct["epochs"]):
+    for epoch in range(1, 1 + params_train["epochs"]):
         print('Training...')
-        loss = train(model, params_device['device'], loaders["train"], optimizer, loss_fn)
-
+        loss = train(model, optimizer, loaders["train"])
+        
+        accs, best_model, best_val = evaluate(model, hetero_graph, [train_idx, val_idx, test_idx])
         print('Evaluating...')
-        train_acc, train_ones = evaluate(model, params_device["device"], loaders["train"], loss_fn)
-        valid_acc, valid_ones = evaluate(model, params_device["device"], loaders["valid"], loss_fn)
-        test_acc, test_ones = evaluate(model, params_device["device"], loaders["test"], loss_fn)
+        train_acc, train_ones = evaluate(model, params_train["device"], loaders["train"], loss_fn)
+        valid_acc, valid_ones = evaluate(model, params_train["device"], loaders["valid"], loss_fn)
+        test_acc, test_ones = evaluate(model, params_train["device"], loaders["test"], loss_fn)
 
         log_dict = {
                 'epoch': epoch,
@@ -97,9 +100,9 @@ def train_model(loaders: dict, metadata: Tuple[List[str], List[Tuple[str, str, s
     return best_model, best_metrics, params_struct, log_df
 
 
-def apply_preds_to_networks(model, heterodata:HeteroData, splits:list[Subset], augments:list[nx.DiGraph], networks:list[dict], params:dict) -> list[dict]:
+def apply_preds_to_networks(model, heterodata:HeteroData, splits:dict[list], augments:list[nx.DiGraph], networks:list[dict], params:dict) -> list[dict]:
     """Apply predictions to networks."""
-    idx = splits[params["subset"]].indices
+    idx = splits[params["subset"]]
     for i in idx: # Looping through networks
         with torch.no_grad():
             preds = F.sigmoid(torch.squeeze(model(heterodata[i]))).round().cpu().detach().numpy()

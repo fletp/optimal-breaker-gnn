@@ -10,6 +10,10 @@ import torch
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
 
+from deepsnap.hetero_graph import HeteroGraph
+from deepsnap.dataset import GraphDataset
+from torch_sparse import SparseTensor
+
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
     compiled = []
     for partition_key, partition_load_func in sorted(partitions.items()):
@@ -19,6 +23,70 @@ def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
         else:
             compiled.append(partition_data)
     return compiled
+
+
+def label_graphs(G_ls: list[dict]) -> list[nx.DiGraph]:
+    """Apply graph labeling to all graphs."""
+    return [label_single_graph(d["network"]) for d in G_ls]
+
+
+def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
+    """Add node, edge, and graph attributes to be consumed by DeepSnap."""
+    # Create clean graph with no attributes but same structure
+    H = G.__class__()
+    H.add_nodes_from(G)
+    H.add_edges_from(G.edges)
+
+    # Set graph attributes compatible with DeepSnap
+    nx.set_node_attributes(H, "busbar", name="node_type")
+    node_feats = {}
+    for u, a in G.nodes(data=True):
+        node_feats[u] = torch.tensor([a["load"], a["genr"], a["n_breakers"]])
+    nx.set_node_attributes(H, node_feats, name="node_feature")
+    edge_types = {}
+    edge_labels = {}
+    edge_feats = {}
+    for u, v, a in G.edges(data=True):
+        if a["is_breaker"]:
+            edge_types[(u, v)] = "breaker"
+            edge_labels[(u, v)] = int(a["breaker_closed"])
+        else:
+            edge_feats[(u, v)] = torch.tensor([a["capacity"], a["reactance"]])
+            if a["is_interconnect"]:
+                edge_types[(u, v)] = "interconnect"
+            else:
+                edge_types[(u, v)] = "branch"
+    nx.set_edge_attributes(H, edge_types, name="edge_type")
+    nx.set_edge_attributes(H, edge_labels, name="edge_label")
+    nx.set_edge_attributes(H, edge_feats, name="edge_feature")
+
+    # Convert graph to undirected
+    H = H.to_undirected()
+    return H
+
+
+def build_deepsnap_datasets(G_ls: nx.Graph) -> GraphDataset:
+    """Create a HeteroGraph dataset."""
+    H_ls = [HeteroGraph(G) for G in G_ls]
+
+    # Sparsify edge index
+    for H in H_ls:
+        for key in H.edge_index:
+            edge_index = H.edge_index[key]
+            adj = SparseTensor(
+                row=edge_index[0],
+                col=edge_index[1],
+                sparse_sizes=(H.num_nodes("busbar"), H.num_nodes("busbar")),
+            )
+            H.edge_index[key] = adj.t()
+
+    # Create dataset
+    D = GraphDataset(
+        graphs=H_ls,
+        task="edge"
+    )
+    example = H_ls[0]
+    return D, example
 
 
 def augment_graphs(G_ls: list[dict]) -> list[nx.DiGraph]:

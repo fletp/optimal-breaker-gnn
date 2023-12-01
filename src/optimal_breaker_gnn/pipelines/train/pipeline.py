@@ -24,7 +24,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=train_model,
-                inputs=["dataloaders", "graph_metadata", "params:structure", "params:platform"],
+                inputs=["dataloaders", "example_heterograph", "params:structure", "params:train"],
                 outputs=["trained_model_best", "best_metrics", "param_struct", "training_logs"],
                 name="train_model",
             ),

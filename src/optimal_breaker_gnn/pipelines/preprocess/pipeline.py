@@ -6,8 +6,8 @@ generated using Kedro 0.18.13
 from kedro.pipeline import Pipeline, pipeline, node
 from .nodes import (
     join_partitions,
-    augment_graphs,
-    build_heterograph_datasets,
+    label_graphs,
+    build_deepsnap_datasets,
 )
 
 
@@ -21,16 +21,16 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="join_partitions",
             ),
             node(
-                func=augment_graphs,
+                func=label_graphs,
                 inputs="training_networks",
                 outputs="training_networks_augmented",
-                name="augment_graphs",
+                name="label_graphs",
             ),
             node(
-                func=build_heterograph_datasets,
+                func=build_deepsnap_datasets,
                 inputs="training_networks_augmented",
-                outputs=["heterodata", "graph_metadata"],
-                name="build_heterograph_datasets",
+                outputs=["heterodata", "example_heterograph"],
+                name="build_deepsnap_datasets",
             ),
         ]
     )

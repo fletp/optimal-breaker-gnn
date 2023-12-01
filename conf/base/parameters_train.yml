@@ -15,27 +15,24 @@ dataloaders:
       frac: 0.2
       batch_size: 25
       shuffle: False
-      n_examples_from_frac: -1
+      n_examples_from_frac: 10
     test:
       frac: 0.1
       batch_size: 25
       shuffle: False
-      n_examples_from_frac: -1
+      n_examples_from_frac: 10
   seed: 42
 
-platform:
-  device: cpu
-
 structure:
-  num_layers: 3
-  num_heads: 2
-  hidden_dim: 256
-  output_dim: 1
-  dropout: 0.5
-  gain: 1
-  bias: 0.01
-  lr: 0.01
+  hidden_size: 64
+  attn_size: 32
+  aggr: mean
+
+train:
+  lr: 0.003
+  weight_decay: 0.00001
   epochs: 20
+  device: cpu
 
 predict:
   subset: valid
