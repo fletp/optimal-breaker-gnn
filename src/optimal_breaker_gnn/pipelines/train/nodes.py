@@ -20,6 +20,7 @@ from deepsnap.batch import Batch
 from deepsnap.dataset import GraphDataset
 from optimal_breaker_gnn.models.hetero_gnn import train, evaluate, HeteroGNN
 from deepsnap.hetero_graph import HeteroGraph
+from torch_sparse import SparseTensor
 
 
 def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
@@ -42,6 +43,22 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
         )
         loaders.update({name: loader})
     return loaders, split_dict, params
+
+
+def sparsify_edge_indices(loaders: dict) -> dict:
+    """Sparsify the edge indices of batches."""
+    for name, loader in loaders.items():
+        for batch in loader:
+            num_nodes = batch.node_to_graph_mapping["busbar"].size()[0]
+            for key in batch.edge_index:
+                edge_index = batch.edge_index[key]
+                adj = SparseTensor(
+                    row=edge_index[0],
+                    col=edge_index[1],
+                    sparse_sizes=(num_nodes, num_nodes),
+                )
+                batch.edge_index[key] = adj.t()
+    return loaders
 
 
 def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, params_train: dict):

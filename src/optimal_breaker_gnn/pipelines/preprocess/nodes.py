@@ -12,7 +12,6 @@ import torch_geometric.transforms as T
 
 from deepsnap.hetero_graph import HeteroGraph
 from deepsnap.dataset import GraphDataset
-from torch_sparse import SparseTensor
 
 def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
     compiled = []
@@ -68,17 +67,6 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
 def build_deepsnap_datasets(G_ls: nx.Graph) -> GraphDataset:
     """Create a HeteroGraph dataset."""
     H_ls = [HeteroGraph(G) for G in G_ls]
-
-    # Sparsify edge index
-    for H in H_ls:
-        for key in H.edge_index:
-            edge_index = H.edge_index[key]
-            adj = SparseTensor(
-                row=edge_index[0],
-                col=edge_index[1],
-                sparse_sizes=(H.num_nodes("busbar"), H.num_nodes("busbar")),
-            )
-            H.edge_index[key] = adj.t()
 
     # Create dataset
     D = GraphDataset(
