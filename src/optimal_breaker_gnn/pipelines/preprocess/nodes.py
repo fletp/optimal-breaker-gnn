@@ -40,7 +40,7 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
     nx.set_node_attributes(H, "busbar", name="node_type")
     node_feats = {}
     for u, a in G.nodes(data=True):
-        node_feats[u] = torch.tensor([a["load"], a["genr"], a["n_breakers"]])
+        node_feats[u] = torch.tensor([a["load"], a["genr"], a["n_breakers"]], dtype=torch.float)
     nx.set_node_attributes(H, node_feats, name="node_feature")
     edge_types = {}
     edge_labels = {}
@@ -50,7 +50,7 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
             edge_types[(u, v)] = "breaker"
             edge_labels[(u, v)] = int(a["breaker_closed"])
         else:
-            edge_feats[(u, v)] = torch.tensor([a["capacity"], a["reactance"]])
+            edge_feats[(u, v)] = torch.tensor([a["capacity"], a["reactance"]], dtype=torch.float)
             if a["is_interconnect"]:
                 edge_types[(u, v)] = "interconnect"
             else:

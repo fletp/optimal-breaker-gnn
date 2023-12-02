@@ -23,7 +23,7 @@ class HeteroGNN(torch.nn.Module):
         self.bns2 = nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types})
         self.relus1 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
         self.relus2 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
-        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.hidden_size, example_graph.num_node_labels(typ)) for typ in example_graph.node_types})
+        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.hidden_size, self.hidden_size) for typ in example_graph.node_types})
 
         ############# Your code here #############
         ## (~10 lines of code)
@@ -61,15 +61,30 @@ class HeteroGNN(torch.nn.Module):
         x = self.convs2(node_features=x, edge_indices=idx)
         x = forward_op(x, self.bns2)
         x = forward_op(x, self.relus2)
-        x = forward_op(x, self.post_mps)
         ##########################################
 
-        return x
+        # Edge classification prediction head
+        x = forward_op(x, self.post_mps)
+        edges = self.edge_head(node_features=x, edge_indices=edge_index)
+        edges = {edge_type: F.sigmoid(edge_vals) for edge_type, edge_vals in edges.items()}
+        return edges
+    
+    def edge_head(self, node_features: dict, edge_indices: dict) -> dict:
+        """Inner-product head for edge-level prediction."""
+        edge_dict = {}
+        for edge_type, edge_index in edge_indices.items():
+            node_type_u, node_type_v = edge_type[0], edge_type[2]
+            embs_u = node_features[node_type_u][edge_index[0]]
+            embs_v = node_features[node_type_v][edge_index[1]]
+            batch_size = edge_index.shape[1]
+            d = embs_u.shape[1]
+            embs_u = embs_u.reshape(batch_size, 1, d)
+            embs_v = embs_v.reshape(batch_size, d, 1)
+            edge_dict[edge_type] = torch.matmul(embs_u, embs_v).squeeze((1, 2))
+        return edge_dict
 
-    def loss(self, preds, y, indices):
-
+    def loss(self, preds, y):
         loss = 0
-        loss_func = F.cross_entropy
 
         ############# Your code here #############
         ## (~3 lines of code)
@@ -80,11 +95,8 @@ class HeteroGNN(torch.nn.Module):
         ## 4. indeces is a dictionary of labeled supervision nodes keyed
         ##    by node_type
 
-        loss = 0
-        for node_type in preds:
-            idx = indices[node_type]
-            loss += loss_func(preds[node_type][idx], y[node_type][idx])
-
+        for edge_type, y_vals in y.items():
+            loss += F.cross_entropy(preds[edge_type], y_vals.to(torch.float))
 
         ##########################################
 
@@ -311,8 +323,7 @@ def train(model, optimizer, loader):
     model.train()
     for batch in loader:
         optimizer.zero_grad()
-        idx = sparsify_edge_index(batch.edge_index)
-        preds = model(batch.node_feature, idx)
+        preds = model(batch.node_feature, batch.edge_index)
         loss = model.loss(preds=preds, y=batch.edge_label)
         loss.backward()
         optimizer.step()
@@ -321,28 +332,20 @@ def train(model, optimizer, loader):
 
 def evaluate(model, loader):
     model.eval()
-    accs = []
+    correct = 0
+    total = 0
+    num_ones = 0
+    num_total = 0
     for batch in loader:
         preds = model(batch.node_feature, batch.edge_index)
-        num_node_types = 0
-        micro = 0
-        macro = 0
-        for node_type in preds:
-            idx = index[node_type]
-            pred = preds[node_type][idx]
-            pred = pred.max(1)[1]
-            label_np = graph.node_label[node_type][idx].cpu().numpy()
-            pred_np = pred.cpu().numpy()
-            micro = f1_score(label_np, pred_np, average='micro')
-            macro = f1_score(label_np, pred_np, average='macro')
-            num_node_types += 1
-
-        # Averaging f1 score might not make sense, but in our example we only
-        # have one node type
-        micro /= num_node_types
-        macro /= num_node_types
-        accs.append((micro, macro))
-    return accs
+        for edge_type in batch.edge_label:
+            y_pred = preds[edge_type].round().cpu().detach().numpy()
+            y_true = batch.edge_label[edge_type].cpu().detach().numpy()
+            num_ones += y_pred.sum()
+            num_total += len(y_pred)
+            total += len(y_true)
+            correct += sum(y_true == y_pred)
+    return (correct/total, num_ones/num_total)
 
 
 def sparsify_edge_index(edge_index: dict[torch.Tensor], node_feature: dict[torch.Tensor]) -> dict[Tuple: SparseTensor]:

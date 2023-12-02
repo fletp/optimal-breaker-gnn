@@ -65,11 +65,10 @@ def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, 
         print('Training...')
         loss = train(model, optimizer, loaders["train"])
         
-        accs, best_model, best_val = evaluate(model, hetero_graph, [train_idx, val_idx, test_idx])
         print('Evaluating...')
-        train_acc, train_ones = evaluate(model, params_train["device"], loaders["train"], loss_fn)
-        valid_acc, valid_ones = evaluate(model, params_train["device"], loaders["valid"], loss_fn)
-        test_acc, test_ones = evaluate(model, params_train["device"], loaders["test"], loss_fn)
+        train_acc, train_ones = evaluate(model, loaders["train"])
+        valid_acc, valid_ones = evaluate(model, loaders["valid"])
+        test_acc, test_ones = evaluate(model, loaders["test"])
 
         log_dict = {
                 'epoch': epoch,
