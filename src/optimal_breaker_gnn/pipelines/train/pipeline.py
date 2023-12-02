@@ -10,7 +10,6 @@ from .nodes import (
     train_model,
     apply_preds_to_networks,
     eval_preds_by_optim,
-    sparsify_edge_indices,
 )
 
 
@@ -24,14 +23,8 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="build_dataloaders",
             ),
             node(
-                func=sparsify_edge_indices,
-                inputs="dataloaders",
-                outputs="sparse_dataloaders",
-                name="sparsify_edge_indices",
-            ),
-            node(
                 func=train_model,
-                inputs=["sparse_dataloaders", "example_heterograph", "params:structure", "params:train"],
+                inputs=["dataloaders", "example_heterograph", "params:structure", "params:train"],
                 outputs=["trained_model_best", "best_metrics", "param_struct", "training_logs"],
                 name="train_model",
             ),

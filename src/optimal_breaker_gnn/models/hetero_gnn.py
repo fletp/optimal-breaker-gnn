@@ -6,6 +6,9 @@ import deepsnap
 from deepsnap.hetero_gnn import forward_op
 from torch_sparse import matmul
 from sklearn.metrics import f1_score
+from deepsnap.batch import Batch
+from torch_sparse import SparseTensor
+from typing import Tuple
 
 
 class HeteroGNN(torch.nn.Module):
@@ -45,16 +48,17 @@ class HeteroGNN(torch.nn.Module):
         # edge index tensors (with respect to each message type).
 
         x = node_feature
+        idx = sparsify_edge_index(edge_index, node_feature=node_feature)
 
         ############# Your code here #############
         ## (~7 lines of code)
         ## Note:
         ## 1. `deepsnap.hetero_gnn.forward_op` can be helpful.
 
-        x = self.convs1(node_features=x, edge_indices=edge_index)
+        x = self.convs1(node_features=x, edge_indices=idx)
         x = forward_op(x, self.bns1)
         x = forward_op(x, self.relus1)
-        x = self.convs2(node_features=x, edge_indices=edge_index)
+        x = self.convs2(node_features=x, edge_indices=idx)
         x = forward_op(x, self.bns2)
         x = forward_op(x, self.relus2)
         x = forward_op(x, self.post_mps)
@@ -307,7 +311,8 @@ def train(model, optimizer, loader):
     model.train()
     for batch in loader:
         optimizer.zero_grad()
-        preds = model(batch.node_feature, batch.edge_index)
+        idx = sparsify_edge_index(batch.edge_index)
+        preds = model(batch.node_feature, idx)
         loss = model.loss(preds=preds, y=batch.edge_label)
         loss.backward()
         optimizer.step()
@@ -338,3 +343,17 @@ def evaluate(model, loader):
         macro /= num_node_types
         accs.append((micro, macro))
     return accs
+
+
+def sparsify_edge_index(edge_index: dict[torch.Tensor], node_feature: dict[torch.Tensor]) -> dict[Tuple: SparseTensor]:
+    """Convert batch's edge index into sparsified version."""
+    idx_dict = {}
+    for key, cur_idx in edge_index.items():
+        adj = SparseTensor(
+            row=cur_idx[0],
+            col=cur_idx[1],
+            sparse_sizes=(node_feature[key[0]].shape[0], node_feature[key[2]].shape[0]),
+        )
+        idx_dict[key] = adj.t()
+    return idx_dict
+    
