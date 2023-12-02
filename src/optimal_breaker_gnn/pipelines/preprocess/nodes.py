@@ -13,7 +13,7 @@ import torch_geometric.transforms as T
 from deepsnap.hetero_graph import HeteroGraph
 from deepsnap.dataset import GraphDataset
 
-def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
+def join_partitions(partitions: dict[str, Callable], params: dict) -> list[dict]:
     compiled = []
     for partition_key, partition_load_func in sorted(partitions.items()):
         partition_data = partition_load_func()
@@ -21,6 +21,8 @@ def join_partitions(partitions: dict[str, Callable]) -> list[dict]:
             compiled.extend(partition_data)
         else:
             compiled.append(partition_data)
+    if params["use_debug_dataset_size"]:
+        compiled = compiled[:params["debug_dataset_size"]]
     return compiled
 
 
