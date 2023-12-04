@@ -51,6 +51,7 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
         if a["is_breaker"]:
             edge_types[(u, v)] = "breaker"
             edge_labels[(u, v)] = int(a["breaker_closed"])
+            edge_feats[(u, v)] = torch.zeros(size=(2,), dtype=torch.float)
         else:
             edge_feats[(u, v)] = torch.tensor([a["capacity"], a["reactance"]], dtype=torch.float)
             if a["is_interconnect"]:

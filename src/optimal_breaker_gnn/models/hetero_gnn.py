@@ -15,9 +15,10 @@ class HeteroGNN(torch.nn.Module):
     def __init__(self, example_graph, params):
         super(HeteroGNN, self).__init__()
         self.hidden_size = params['hidden_size']
+        self.edge_dim = params["edge_dim"]
 
-        self.convs1 = HeteroGNNWrapperConv(generate_convs(example_graph, HeteroGNNConv, self.hidden_size, first_layer=True), params)
-        self.convs2 = HeteroGNNWrapperConv(generate_convs(example_graph, HeteroGNNConv, self.hidden_size, first_layer=False), params)
+        self.convs1 = HeteroGNNWrapperConv(generate_convs(example_graph, pyg_nn.GATv2Conv, self.hidden_size, self.edge_dim, first_layer=True), params)
+        self.convs2 = HeteroGNNWrapperConv(generate_convs(example_graph, pyg_nn.GATv2Conv, self.hidden_size, self.edge_dim, first_layer=False), params)
 
         self.bns1 = nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types})
         self.bns2 = nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types})
@@ -40,7 +41,7 @@ class HeteroGNN(torch.nn.Module):
         ##    useful.
         ##########################################
 
-    def forward(self, node_feature, edge_index):
+    def forward(self, node_feature, edge_index, edge_feature):
         # TODO: Implement the forward function. Notice that `node_feature` is
         # a dictionary of tensors where keys are node types and values are
         # corresponding feature tensors. The `edge_index` is a dictionary of
@@ -55,10 +56,10 @@ class HeteroGNN(torch.nn.Module):
         ## Note:
         ## 1. `deepsnap.hetero_gnn.forward_op` can be helpful.
 
-        x = self.convs1(node_features=x, edge_indices=idx)
+        x = self.convs1(node_features=x, edge_indices=idx, edge_features=edge_feature)
         x = forward_op(x, self.bns1)
         x = forward_op(x, self.relus1)
-        x = self.convs2(node_features=x, edge_indices=idx)
+        x = self.convs2(node_features=x, edge_indices=idx, edge_features=edge_feature)
         x = forward_op(x, self.bns2)
         x = forward_op(x, self.relus2)
         ##########################################
@@ -230,18 +231,18 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             for layer in self.attn_proj.children():
                 layer.reset_parameters()
 
-    def forward(self, node_features, edge_indices):
+    def forward(self, node_features, edge_indices, edge_features):
         message_type_emb = {}
-        for message_key, message_type in edge_indices.items():
+        for message_key in edge_indices:
             src_type, edge_type, dst_type = message_key
-            node_feature_src = node_features[src_type]
-            node_feature_dst = node_features[dst_type]
+            node_feature = node_features[src_type]
             edge_index = edge_indices[message_key]
+            edge_feature = edge_features[message_key]
             message_type_emb[message_key] = (
                 self.convs[message_key](
-                    node_feature_src,
-                    node_feature_dst,
-                    edge_index,
+                    x=node_feature,
+                    edge_index=edge_index,
+                    edge_attr=edge_feature,
                 )
             )
         node_emb = {dst: [] for _, _, dst in message_type_emb.keys()}
@@ -291,7 +292,7 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             return x.sum(dim=0)
         
 
-def generate_convs(hetero_graph, conv, hidden_size, first_layer=False):
+def generate_convs(hetero_graph, conv, hidden_size, edge_dim, first_layer=False):
     # TODO: Implement this function that returns a dictionary of `HeteroGNNConv`
     # layers where the keys are message types. `hetero_graph` is deepsnap `HeteroGraph`
     # object and the `conv` is the `HeteroGNNConv`.
@@ -308,11 +309,9 @@ def generate_convs(hetero_graph, conv, hidden_size, first_layer=False):
     for m in msgs:
       if first_layer:
         in_ch_src = hetero_graph.num_node_features(m[0])
-        in_ch_dst = hetero_graph.num_node_features(m[2])
       else:
         in_ch_src = hidden_size
-        in_ch_dst = hidden_size
-      convs.update({m: conv(in_channels_src=in_ch_src, in_channels_dst=in_ch_dst, out_channels=hidden_size)})
+      convs.update({m: conv(in_channels=in_ch_src, out_channels=hidden_size, edge_dim=edge_dim, add_self_loops=False)})
 
     ##########################################
 
@@ -323,7 +322,7 @@ def train(model, optimizer, loader):
     model.train()
     for batch in loader:
         optimizer.zero_grad()
-        preds = model(batch.node_feature, batch.edge_index)
+        preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
         loss = model.loss(preds=preds, y=batch.edge_label)
         loss.backward()
         optimizer.step()

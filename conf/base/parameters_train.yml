@@ -25,6 +25,7 @@ dataloaders:
 
 structure:
   hidden_size: 64
+  edge_dim: 2
   attn_size: 32
   aggr: mean
 
