@@ -321,30 +321,30 @@ def generate_convs(hetero_graph, conv, hidden_size, edge_dim, first_layer=False)
 def train(model, optimizer, loader):
     model.train()
     for batch in loader:
-        optimizer.zero_grad()
         preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
         loss = model.loss(preds=preds, y=batch.edge_label)
         loss.backward()
         optimizer.step()
+        optimizer.zero_grad()
     return loss.item()
 
 
 def evaluate(model, loader):
     model.eval()
-    correct = 0
-    total = 0
-    num_ones = 0
-    num_total = 0
-    for batch in loader:
-        preds = model(batch.node_feature, batch.edge_index)
-        for edge_type in batch.edge_label:
-            y_pred = preds[edge_type].round().cpu().detach().numpy()
-            y_true = batch.edge_label[edge_type].cpu().detach().numpy()
-            num_ones += y_pred.sum()
-            num_total += len(y_pred)
-            total += len(y_true)
-            correct += sum(y_true == y_pred)
-    return (correct/total, num_ones/num_total)
+    correct, total, num_ones, num_total = 0, 0, 0, 0
+    with torch.no_grad():
+        for batch in loader:
+            preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
+            for edge_type in batch.edge_label:
+                y_pred = preds[edge_type].round().cpu().detach().numpy()
+                y_true = batch.edge_label[edge_type].cpu().detach().numpy()
+                num_ones += y_pred.sum()
+                num_total += len(y_pred)
+                total += len(y_true)
+                correct += sum(y_true == y_pred)
+        correct_frac = correct / total
+        ones_frac = num_ones / num_total
+    return (correct_frac, ones_frac)
 
 
 def sparsify_edge_index(edge_index: dict[torch.Tensor], node_feature: dict[torch.Tensor]) -> dict[Tuple: SparseTensor]:
