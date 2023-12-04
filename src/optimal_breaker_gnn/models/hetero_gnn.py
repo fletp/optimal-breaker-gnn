@@ -17,6 +17,7 @@ class HeteroGNN(torch.nn.Module):
 
         self.num_layers = params["num_layers"]
         self.hidden_size = params["hidden_size"]
+        self.sparsify_index = params["sparsify_index"]
 
         self.convs, self.bns, self.relus = nn.ModuleList(), nn.ModuleList(), nn.ModuleList()
         for i in range(self.num_layers):
@@ -58,7 +59,10 @@ class HeteroGNN(torch.nn.Module):
         # edge index tensors (with respect to each message type).
 
         x = node_feature
-        idx = sparsify_edge_index(edge_index, node_feature=node_feature)
+        if self.sparsify_index:
+            idx = sparsify_edge_index(edge_index, node_feature=node_feature)
+        else:
+            idx = edge_index
 
         ############# Your code here #############
         ## (~7 lines of code)
