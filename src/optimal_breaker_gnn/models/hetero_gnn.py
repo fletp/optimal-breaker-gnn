@@ -15,14 +15,25 @@ class HeteroGNN(torch.nn.Module):
     def __init__(self, example_graph, params):
         super(HeteroGNN, self).__init__()
 
-        self.convs1 = HeteroGNNWrapperConv(generate_convs(pyg_nn.GATv2Conv, example_graph, params, first_layer=True), params)
-        self.convs2 = HeteroGNNWrapperConv(generate_convs(pyg_nn.GATv2Conv, example_graph, params, first_layer=False), params)
+        self.num_layers = params["num_layers"]
+        self.hidden_size = params["hidden_size"]
 
-        self.bns1 = nn.ModuleDict({typ: nn.BatchNorm1d(params["hidden_size"], eps=1) for typ in example_graph.node_types})
-        self.bns2 = nn.ModuleDict({typ: nn.BatchNorm1d(params["hidden_size"], eps=1) for typ in example_graph.node_types})
-        self.relus1 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
-        self.relus2 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
-        self.post_mps = nn.ModuleDict({typ: nn.Linear(params["hidden_size"], params["hidden_size"]) for typ in example_graph.node_types})
+        self.convs, self.bns, self.relus = nn.ModuleList(), nn.ModuleList(), nn.ModuleList()
+        for i in range(self.num_layers):
+            if i == 0:
+                first_layer = True
+            else:
+                first_layer = False
+            cur_convs = generate_convs(
+                pyg_nn.GATv2Conv,
+                example_graph,
+                params,
+                first_layer=first_layer,
+            )
+            self.convs.append(HeteroGNNWrapperConv(cur_convs, params))
+            self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types}))
+            self.relus.append(nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types}))
+        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.hidden_size, self.hidden_size) for typ in example_graph.node_types})
 
         ############# Your code here #############
         ## (~10 lines of code)
@@ -54,12 +65,10 @@ class HeteroGNN(torch.nn.Module):
         ## Note:
         ## 1. `deepsnap.hetero_gnn.forward_op` can be helpful.
 
-        x = self.convs1(node_features=x, edge_indices=idx, edge_features=edge_feature)
-        x = forward_op(x, self.bns1)
-        x = forward_op(x, self.relus1)
-        x = self.convs2(node_features=x, edge_indices=idx, edge_features=edge_feature)
-        x = forward_op(x, self.bns2)
-        x = forward_op(x, self.relus2)
+        for i in range(self.num_layers):
+            x = self.convs[i](node_features=x, edge_indices=idx, edge_features=edge_feature)
+            x = forward_op(x, self.bns[i])
+            x = forward_op(x, self.relus[i])
         ##########################################
 
         # Edge classification prediction head
