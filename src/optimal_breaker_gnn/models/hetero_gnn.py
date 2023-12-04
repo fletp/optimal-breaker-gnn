@@ -14,17 +14,15 @@ from typing import Tuple
 class HeteroGNN(torch.nn.Module):
     def __init__(self, example_graph, params):
         super(HeteroGNN, self).__init__()
-        self.hidden_size = params['hidden_size']
-        self.edge_dim = params["edge_dim"]
 
-        self.convs1 = HeteroGNNWrapperConv(generate_convs(example_graph, pyg_nn.GATv2Conv, self.hidden_size, self.edge_dim, first_layer=True), params)
-        self.convs2 = HeteroGNNWrapperConv(generate_convs(example_graph, pyg_nn.GATv2Conv, self.hidden_size, self.edge_dim, first_layer=False), params)
+        self.convs1 = HeteroGNNWrapperConv(generate_convs(pyg_nn.GATv2Conv, example_graph, params, first_layer=True), params)
+        self.convs2 = HeteroGNNWrapperConv(generate_convs(pyg_nn.GATv2Conv, example_graph, params, first_layer=False), params)
 
-        self.bns1 = nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types})
-        self.bns2 = nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types})
+        self.bns1 = nn.ModuleDict({typ: nn.BatchNorm1d(params["hidden_size"], eps=1) for typ in example_graph.node_types})
+        self.bns2 = nn.ModuleDict({typ: nn.BatchNorm1d(params["hidden_size"], eps=1) for typ in example_graph.node_types})
         self.relus1 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
         self.relus2 = nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types})
-        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.hidden_size, self.hidden_size) for typ in example_graph.node_types})
+        self.post_mps = nn.ModuleDict({typ: nn.Linear(params["hidden_size"], params["hidden_size"]) for typ in example_graph.node_types})
 
         ############# Your code here #############
         ## (~10 lines of code)
@@ -292,9 +290,9 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             return x.sum(dim=0)
         
 
-def generate_convs(hetero_graph, conv, hidden_size, edge_dim, first_layer=False):
+def generate_convs(conv, example_graph, params, first_layer=False):
     # TODO: Implement this function that returns a dictionary of `HeteroGNNConv`
-    # layers where the keys are message types. `hetero_graph` is deepsnap `HeteroGraph`
+    # layers where the keys are message types. `example_graph` is deepsnap `HeteroGraph`
     # object and the `conv` is the `HeteroGNNConv`.
 
     convs = {}
@@ -305,13 +303,20 @@ def generate_convs(hetero_graph, conv, hidden_size, edge_dim, first_layer=False)
     ## 1. See the hints above!
     ## 2. conv is of type `HeteroGNNConv`
 
-    msgs = hetero_graph.message_types
+    msgs = example_graph.message_types
     for m in msgs:
-      if first_layer:
-        in_ch_src = hetero_graph.num_node_features(m[0])
-      else:
-        in_ch_src = hidden_size
-      convs.update({m: conv(in_channels=in_ch_src, out_channels=hidden_size, edge_dim=edge_dim, add_self_loops=False)})
+        if first_layer:
+            in_ch_src = example_graph.num_node_features(m[0])
+        else:
+            in_ch_src = params["hidden_size"]
+        cur_conv = conv(
+            in_channels=in_ch_src,
+            out_channels=params["hidden_size"],
+            edge_dim=params["edge_dim"],
+            heads=params["attn_heads"],
+            add_self_loops=params["add_self_loops"],
+        )
+        convs.update({m: cur_conv})
 
     ##########################################
 
