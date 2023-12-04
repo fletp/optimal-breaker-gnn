@@ -24,7 +24,7 @@ dataloaders:
   seed: 42
 
 structure:
-  num_layers: 2
+  num_layers: 10
   hidden_size: 64
   edge_dim: 2
   attn_size: 32
