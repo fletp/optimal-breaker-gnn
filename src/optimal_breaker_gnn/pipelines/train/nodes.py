@@ -99,18 +99,28 @@ def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, 
     return best_model, best_metrics, params_struct, log_df
 
 
-def apply_preds_to_networks(model, heterodata:HeteroData, splits:dict[list], augments:list[nx.DiGraph], networks:list[dict], params:dict) -> list[dict]:
+def apply_preds_to_networks(
+        model,
+        heterodata:GraphDataset,
+        networks:list[dict],
+        splits:dict[list],
+        params:dict,
+    ) -> list[dict]:
     """Apply predictions to networks."""
     idx = splits[params["subset"]]
+    edge_type = tuple(params["predict_edge_type"])
     for i in idx: # Looping through networks
-        with torch.no_grad():
-            preds = F.sigmoid(torch.squeeze(model(heterodata[i]))).round().cpu().detach().numpy()
+        g = heterodata[i]
+        corresp = g.edge_label_index[edge_type]
         networks[i]["network_pred"] = copy.deepcopy(networks[i]["network"])
-        for b in range(len(preds)): # Looping through predicted values / breakers
-            closed = preds[b]
-            aug_id = int(heterodata[i]["breaker"].node_id[b])
-            u, v = augments[i].nodes[aug_id]["src_targ"]
-            networks[i]["network_pred"].edges[u, v]["breaker_closed"] = closed
+        with torch.no_grad():
+            preds = model(g.node_feature, g.edge_index, g.edge_feature)
+            preds_edge = preds[edge_type].round().cpu().detach().numpy()
+            for b in range(len(preds)): # Looping through predicted values / breakers
+                closed = preds_edge[b]
+                u, v = int(corresp[0, b]) + 1, int(corresp[1, b]) + 1 # Adding one because we set networks to be 1-indexed, whereas DeepSnap must internally 0-index
+                if (u, v) in networks[i]["network_pred"].edges: # Because we're moving from an undirected graph to a directed graph
+                    networks[i]["network_pred"].edges[u, v]["breaker_closed"] = closed
     return [networks[i] for i in idx]
 
 

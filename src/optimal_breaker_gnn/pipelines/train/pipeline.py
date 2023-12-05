@@ -30,7 +30,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             node(
                 func=apply_preds_to_networks,
-                inputs=["trained_model_best", "heterodata", "splits", "training_networks_augmented", "training_networks", "params:predict"],
+                inputs=["trained_model_best", "heterodata", "training_networks", "splits", "params:predict"],
                 outputs="prediction_networks",
                 name="apply_preds_to_networks",
             ),

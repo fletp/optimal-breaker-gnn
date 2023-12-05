@@ -41,3 +41,7 @@ train:
 
 predict:
   subset: valid
+  predict_edge_type:
+    - busbar
+    - breaker
+    - busbar
