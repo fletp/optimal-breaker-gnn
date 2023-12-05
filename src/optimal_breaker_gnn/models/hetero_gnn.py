@@ -15,26 +15,26 @@ class HeteroGNN(torch.nn.Module):
     def __init__(self, example_graph, params):
         super(HeteroGNN, self).__init__()
 
+        self.example_graph = example_graph
         self.num_layers = params["num_layers"]
         self.hidden_size = params["hidden_size"]
         self.sparsify_index = params["sparsify_index"]
+        self.edge_dim = params["edge_dim"]
+        self.attn_heads = params["attn_heads"]
+        self.add_self_loops = params["add_self_loops"]
 
         self.convs, self.bns, self.relus = nn.ModuleList(), nn.ModuleList(), nn.ModuleList()
+        node_types = self.example_graph.node_types
         for i in range(self.num_layers):
             if i == 0:
                 first_layer = True
             else:
                 first_layer = False
-            cur_convs = generate_convs(
-                pyg_nn.GATv2Conv,
-                example_graph,
-                params,
-                first_layer=first_layer,
-            )
+            cur_convs = self.generate_convs(pyg_nn.GATv2Conv, first_layer=first_layer)
             self.convs.append(HeteroGNNWrapperConv(cur_convs, params))
-            self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(self.hidden_size, eps=1) for typ in example_graph.node_types}))
-            self.relus.append(nn.ModuleDict({typ: nn.LeakyReLU() for typ in example_graph.node_types}))
-        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.hidden_size, self.hidden_size) for typ in example_graph.node_types})
+            self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(self.attn_heads * self.hidden_size, eps=1) for typ in node_types}))
+            self.relus.append(nn.ModuleDict({typ: nn.LeakyReLU() for typ in node_types}))
+        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.attn_heads * self.hidden_size, self.hidden_size) for typ in node_types})
 
         ############# Your code here #############
         ## (~10 lines of code)
@@ -50,6 +50,38 @@ class HeteroGNN(torch.nn.Module):
         ##    `deepsnap.hetero_graph.HeteroGraph.num_node_labels(node_type)` will be
         ##    useful.
         ##########################################
+
+    def generate_convs(self, conv_layer, first_layer=False):
+        # TODO: Implement this function that returns a dictionary of `HeteroGNNConv`
+        # layers where the keys are message types. `example_graph` is deepsnap `HeteroGraph`
+        # object and the `conv` is the `HeteroGNNConv`.
+
+        convs = {}
+
+        ############# Your code here #############
+        ## (~9 lines of code)
+        ## Note:
+        ## 1. See the hints above!
+        ## 2. conv is of type `HeteroGNNConv`
+
+        msgs = self.example_graph.message_types
+        for m in msgs:
+            if first_layer:
+                in_ch_src = self.example_graph.num_node_features(m[0])
+            else:
+                in_ch_src = self.hidden_size * self.attn_heads
+            cur_conv = conv_layer(
+                in_channels=in_ch_src,
+                out_channels=self.hidden_size,
+                edge_dim=self.edge_dim,
+                heads=self.attn_heads,
+                add_self_loops=self.add_self_loops,
+            )
+            convs.update({m: cur_conv})
+
+        ##########################################
+
+        return convs
 
     def forward(self, node_feature, edge_index, edge_feature):
         # TODO: Implement the forward function. Notice that `node_feature` is
@@ -301,39 +333,6 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             alpha = alpha.view(M, 1, 1)
             x = x * alpha
             return x.sum(dim=0)
-        
-
-def generate_convs(conv, example_graph, params, first_layer=False):
-    # TODO: Implement this function that returns a dictionary of `HeteroGNNConv`
-    # layers where the keys are message types. `example_graph` is deepsnap `HeteroGraph`
-    # object and the `conv` is the `HeteroGNNConv`.
-
-    convs = {}
-
-    ############# Your code here #############
-    ## (~9 lines of code)
-    ## Note:
-    ## 1. See the hints above!
-    ## 2. conv is of type `HeteroGNNConv`
-
-    msgs = example_graph.message_types
-    for m in msgs:
-        if first_layer:
-            in_ch_src = example_graph.num_node_features(m[0])
-        else:
-            in_ch_src = params["hidden_size"]
-        cur_conv = conv(
-            in_channels=in_ch_src,
-            out_channels=params["hidden_size"],
-            edge_dim=params["edge_dim"],
-            heads=params["attn_heads"],
-            add_self_loops=params["add_self_loops"],
-        )
-        convs.update({m: cur_conv})
-
-    ##########################################
-
-    return convs
 
 
 def train(model, optimizer, loader):
