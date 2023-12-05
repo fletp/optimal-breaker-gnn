@@ -2,15 +2,17 @@
 This is a boilerplate pipeline 'build_training_examples'
 generated using Kedro 0.18.13
 """
-import cvxpy as cp
-import networkx as nx
-import pandas as pd
-import numpy as np
 import platform
 import time
 from datetime import datetime
 
-from optimal_breaker_gnn.models.optim import define_problem, concretize_network_attrs
+import cvxpy as cp
+import networkx as nx
+import numpy as np
+import pandas as pd
+
+from optimal_breaker_gnn.models.optim import concretize_network_attrs, define_problem
+
 
 def build_base_network(nodes: pd.DataFrame, edges: pd.DataFrame) -> nx.Graph:
     """Build the base network from the universal node and edge specifications."""

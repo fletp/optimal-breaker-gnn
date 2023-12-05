@@ -1,7 +1,9 @@
+from typing import Tuple
+
 import cvxpy as cp
 import networkx as nx
 import numpy as np
-from typing import Tuple
+
 
 def define_problem(G: nx.DiGraph, mode: str, params: dict) -> cp.Problem:
     """Define the problem from the network, but don't solve."""

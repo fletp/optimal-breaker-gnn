@@ -1,14 +1,14 @@
+from typing import Tuple
+
+import deepsnap
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
-import deepsnap
-from deepsnap.hetero_gnn import forward_op
-from torch_sparse import matmul
-from sklearn.metrics import f1_score
 from deepsnap.batch import Batch
-from torch_sparse import SparseTensor
-from typing import Tuple
+from deepsnap.hetero_gnn import forward_op
+from sklearn.metrics import f1_score
+from torch_sparse import SparseTensor, matmul
 
 
 class HeteroGNN(torch.nn.Module):

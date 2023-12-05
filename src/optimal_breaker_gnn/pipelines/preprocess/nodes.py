@@ -2,16 +2,17 @@
 This is a boilerplate pipeline 'preprocess'
 generated using Kedro 0.18.13
 """
-import pandas as pd
+from typing import Callable, Tuple
+
 import networkx as nx
 import numpy as np
-from typing import Callable, Tuple
+import pandas as pd
 import torch
-from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
-
-from deepsnap.hetero_graph import HeteroGraph
 from deepsnap.dataset import GraphDataset
+from deepsnap.hetero_graph import HeteroGraph
+from torch_geometric.data import HeteroData
+
 
 def join_partitions(partitions: dict[str, Callable], params: dict) -> list[dict]:
     compiled = []

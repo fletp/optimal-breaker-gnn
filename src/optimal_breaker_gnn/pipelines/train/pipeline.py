@@ -6,10 +6,10 @@ generated using Kedro 0.18.13
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import (
-    build_dataloaders,
-    train_model,
     apply_preds_to_networks,
+    build_dataloaders,
     eval_preds_by_optim,
+    train_model,
 )
 
 

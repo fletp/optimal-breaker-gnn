@@ -4,11 +4,8 @@ generated using Kedro 0.18.13
 """
 
 from kedro.pipeline import Pipeline, node, pipeline
-from .nodes import (
-    build_base_network,
-    create_network_scenario,
-    optimize_scenario,
-)
+
+from .nodes import build_base_network, create_network_scenario, optimize_scenario
 
 
 def create_pipeline(**kwargs) -> Pipeline:
