@@ -10,17 +10,17 @@ dataloaders:
       frac: 0.7
       batch_size: 25
       shuffle: True
-      n_examples_from_frac: 10
+      n_examples_from_frac: -1
     valid:
       frac: 0.2
       batch_size: 25
       shuffle: False
-      n_examples_from_frac: 10
+      n_examples_from_frac: -1
     test:
       frac: 0.1
       batch_size: 25
       shuffle: False
-      n_examples_from_frac: 10
+      n_examples_from_frac: -1
   seed: 42
 
 structure:
