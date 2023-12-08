@@ -23,7 +23,13 @@ from optimal_breaker_gnn.models.hetero_gnn import HeteroGNN, evaluate, train
 from optimal_breaker_gnn.models.optim import concretize_network_attrs, define_problem
 
 
-def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
+def build_dataloaders(
+        data: list[HeteroGraph], 
+        params: dict
+    ) -> dict[DataLoader]:
+    """Apply train-valid-test split to list of graphs."""
+
+    # Apply splits
     split_names = list(params["splits"].keys())
     split_fracs = [params["splits"][k]["frac"] for k in split_names]
 
@@ -31,6 +37,7 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
     splits = random_split(data, lengths=split_fracs, generator=rng)
     split_dict = {split_names[i]:splits[i].indices for i in range(len(split_names))}
 
+    # Create corresponding dataloaders
     loaders = {}
     for name, idx in split_dict.items():
         cur_data = data[idx]
@@ -45,7 +52,27 @@ def build_dataloaders(data: list, params: dict) -> dict[DataLoader]:
     return loaders, split_dict, params
 
 
-def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, params_train: dict):
+def train_model(
+        loaders: dict[DataLoader], 
+        example_graph: HeteroGraph, 
+        params_struct: dict, 
+        params_train: dict
+    ) -> Tuple[nn.Module, dict, dict, pd.DataFrame]:
+    """Train the model and evaluate performance across epochs, saving the best model.
+    
+    Args:
+        loaders: dict of dataloaders for training, validation, and testing
+        example_graph: HeteroGraph with the same entity types and numbers
+            of features for each entity as the graphs to be processed.
+        params_struct: dict of model structure parameters
+        params_train: dict of training process parameters
+
+    Returns:
+        best_model: the best model identified by validation score
+        best_metrics: the metrics achieved by the best_model
+        params_struct: the structural parameters that define the best model
+        log_df: the trajectory of metrics across epochs
+    """
     model = HeteroGNN(
         example_graph=example_graph,
         params=params_struct,
@@ -101,13 +128,25 @@ def train_model(loaders: dict, example_graph: HeteroGraph, params_struct: dict, 
 
 
 def apply_preds_to_networks(
-        model,
+        model: nn.Module,
         heterodata:GraphDataset,
         networks:list[dict],
         splits:dict[list],
         params:dict,
     ) -> list[dict]:
-    """Apply predictions to networks."""
+    """Apply model predictions to original networks.
+    
+    Args:
+        model: pytorch module which defines the model
+        heterodata: DeepSnap GraphDataset giving all the graphs used in this
+            project (training, validation, and testing) for use as a lookup
+        networks: original NetworkX graphs with labelled optimal results
+        splits: train, validation, test dataset split indices
+        params: dict of parameters
+    
+    Returns:
+        list of dicts containing NetworkX graphs with model-derived labels applied
+    """
     idx = splits[params["subset"]]
     edge_type = tuple(params["predict_edge_type"])
     for i in idx: # Looping through networks
@@ -125,14 +164,30 @@ def apply_preds_to_networks(
     return [networks[i] for i in idx]
 
 
-def eval_preds_by_optim(networks:list[dict], params:dict) -> dict:
-    """Evaluate predictions by optimization."""
+def eval_preds_by_optim(
+        networks:list[dict], 
+        params:dict
+    ) -> list[dict]:
+    """Evaluate model predictions by optimization of labeled networks.
+    
+    Args:
+        networks: list of dicts containing NetworkX graphs with model-derived
+            labels applied.
+        params: parameters for the optimization problem
+
+    Returns:
+        list of dicts containing optimized NetworkX graphs along with result
+        metrics.
+    """
     evals = [eval_single_pred(d["network_pred"], params=params) for d in networks]
     return evals
     
 
-def eval_single_pred(G:nx.DiGraph, params:dict) -> dict:
-    """Evaluate a single prediction using optimization."""
+def eval_single_pred(
+        G:nx.DiGraph, 
+        params:dict
+    ) -> dict:
+    """Evaluate a single prediction using optimization of a labeled network."""
     tic = time.perf_counter()
     prob = define_problem(G=G, mode="eval", params=params)
     prob.solve(solver=cp.XPRESS, verbose=True)
