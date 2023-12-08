@@ -8,6 +8,7 @@ import torch_geometric.nn as pyg_nn
 from deepsnap.batch import Batch
 from deepsnap.hetero_gnn import forward_op
 from deepsnap.hetero_graph import HeteroGraph
+from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 from torch_sparse import SparseTensor, matmul
 from typing import type
@@ -286,7 +287,7 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
 def train(
         model: nn.Module,
         optimizer: torch.optim.optimizer.Optimizer,
-        loader: torch.utils.data.DataLoader,
+        loader: DataLoader,
     ) -> float:
     """Train the model for one epoch through the given dataloader."""
     model.train()
@@ -301,7 +302,7 @@ def train(
 
 def evaluate(
         model: nn.Module,
-        loader: torch.utils.data.DataLoader
+        loader: DataLoader
     ) -> Tuple[float, float]:
     """Evaluate current model on a dataloader of graphs."""
     model.eval()
