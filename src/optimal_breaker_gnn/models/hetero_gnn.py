@@ -11,7 +11,7 @@ from deepsnap.hetero_graph import HeteroGraph
 from torch.utils.data import DataLoader
 from sklearn.metrics import f1_score
 from torch_sparse import SparseTensor, matmul
-from typing import type
+from typing import Type
 
 
 class HeteroGNN(torch.nn.Module):
@@ -51,7 +51,7 @@ class HeteroGNN(torch.nn.Module):
 
     def generate_convs(
             self,
-            conv_layer: type, 
+            conv_layer: Type, 
             first_layer: bool=False
         ) -> dict[nn.Module]:
         """Generate graph convolutional layers for each message type.
@@ -286,7 +286,7 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
 
 def train(
         model: nn.Module,
-        optimizer: torch.optim.optimizer.Optimizer,
+        optimizer: torch.optim.Optimizer,
         loader: DataLoader,
     ) -> float:
     """Train the model for one epoch through the given dataloader."""
