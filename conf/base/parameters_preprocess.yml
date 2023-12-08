@@ -5,5 +5,5 @@
 # Link: https://docs.kedro.org/en/0.18.13/configuration/parameters.html
 
 data_size:
-  use_debug_dataset_size: True
+  use_debug_dataset_size: False
   debug_dataset_size: 20
