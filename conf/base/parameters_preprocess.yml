@@ -7,3 +7,7 @@
 data_size:
   use_debug_dataset_size: False
   debug_dataset_size: 20
+
+cycle_counts:
+  n_cycles: 50
+  max_cycle_length: 20

@@ -5,7 +5,7 @@ generated using Kedro 0.18.13
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import build_deepsnap_datasets, join_partitions, label_graphs
+from .nodes import build_deepsnap_datasets, join_partitions, label_cycle_counts, label_graphs_deepsnap
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -18,10 +18,16 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="join_partitions",
             ),
             node(
-                func=label_graphs,
-                inputs="training_networks",
+                func=label_cycle_counts,
+                inputs=["training_networks", "params:cycle_counts"],
+                outputs="training_networks_cycles",
+                name="label_cycle_counts",
+            ),
+            node(
+                func=label_graphs_deepsnap,
+                inputs="training_networks_cycles",
                 outputs="training_networks_augmented",
-                name="label_graphs",
+                name="label_graphs_deepsnap",
             ),
             node(
                 func=build_deepsnap_datasets,

@@ -39,12 +39,60 @@ def join_partitions(
     return compiled
 
 
-def label_graphs(G_ls: list[dict]) -> list[nx.DiGraph]:
+def label_cycle_counts(G_ls: list[dict], params: dict) -> list[dict]:
+    """Label each graph with the node cycle counts."""
+    for d in G_ls:
+        d["network"] = label_node_cycle_counts(
+            G=d["network"],
+            n_cycles=params["n_cycles"],
+            max_length=params["max_cycle_length"]
+        )
+    return G_ls
+
+
+def label_node_cycle_counts(G: nx.Graph, n_cycles: int, max_length: int) -> nx.Graph:
+    """Get the number of cycles of each length each node resides in.
+
+    Each indicator vector has counts for lengths i = 1, ..., max_length
+    
+    Args:
+        G: NetworkX graph to search for cycles
+        n_cycles: maximum number of cycles to consider. If more are identified,
+            then they will be randomly sampled down to this number.
+        max_length: maximum length of cycles to consider 
+
+    Returns:
+        G with a new node attribute "cycle_count" giving the vector of counts
+            of cycles of each length that the node participates in.
+    """
+    # Count cycles
+    H = G.to_undirected()
+    cycles = nx.cycle_basis(H)
+
+    # If number of cycles we want to look at is less than the total number, use a random sample
+    if len(cycles) > n_cycles:
+        sample_idx = np.random.randint(0, len(cycles), n_cycles)
+        cycles = [cycles[i] for i in sample_idx]
+
+    # Generate graph labels from cycles
+    n_bins = max_length - 3 + 1 # Since the minimum length of a cycle is 3
+    counts = {u: [0] * n_bins for u in G.nodes}
+    for cyc in cycles:
+        len_bin = min(len(cyc), max_length) - 3
+        for node in cyc:
+            counts[node][len_bin] += 1
+    nx.set_node_attributes(G, counts, name="cycle_count")
+    return G
+
+
+def label_graphs_deepsnap(G_ls: list[dict]) -> list[nx.DiGraph]:
     """Apply graph labeling to all graphs."""
-    return [label_single_graph(d["network"]) for d in G_ls]
+    for d in G_ls:
+        d["network"] = label_single_graph_deepsnap(d["network"])
+    return G_ls
 
 
-def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
+def label_single_graph_deepsnap(G: nx.DiGraph) -> nx.DiGraph:
     """Add node, edge, and graph attributes to be consumed by DeepSnap."""
     # Create clean graph with no attributes but same structure
     H = G.__class__()
@@ -55,7 +103,9 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
     nx.set_node_attributes(H, "busbar", name="node_type")
     node_feats = {}
     for u, a in G.nodes(data=True):
-        node_feats[u] = torch.tensor([a["load"], a["genr"], a["n_breakers"]], dtype=torch.float)
+        scalars = torch.tensor([a["load"], a["genr"], a["n_breakers"]], dtype=torch.float)
+        cycles = torch.tensor(a["cycle_count"], dtype=torch.float)
+        node_feats[u] = torch.cat([scalars, cycles], dim=0)
     nx.set_node_attributes(H, node_feats, name="node_feature")
 
     # Set edge attributes for DeepSnap
@@ -79,17 +129,17 @@ def label_single_graph(G: nx.DiGraph) -> nx.DiGraph:
     return H
 
 
-def build_deepsnap_datasets(G_ls: list[nx.Graph]) -> Tuple[GraphDataset, HeteroGraph]:
+def build_deepsnap_datasets(G_ls: list[dict]) -> Tuple[GraphDataset, HeteroGraph]:
     """Create a HeteroGraph dataset.
     
     Args:
-        G_ls: list of NetworkX graphs
+        G_ls: list of dicts of NetworkX graphs with descriptions
 
     Returns:
         DeepSnap GraphDataset and an example HeteroGraph to use for node and
         message type checks.
     """
-    H_ls = [HeteroGraph(G.to_undirected()) for G in G_ls]
+    H_ls = [HeteroGraph(d["network"].to_undirected()) for d in G_ls]
 
     # Create dataset
     D = GraphDataset(
