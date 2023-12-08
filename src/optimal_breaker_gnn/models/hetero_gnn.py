@@ -7,12 +7,23 @@ import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
 from deepsnap.batch import Batch
 from deepsnap.hetero_gnn import forward_op
+from deepsnap.hetero_graph import HeteroGraph
 from sklearn.metrics import f1_score
 from torch_sparse import SparseTensor, matmul
+from typing import type
 
 
 class HeteroGNN(torch.nn.Module):
-    def __init__(self, example_graph, params):
+    """Top-level definition of a heterogeneous graph neural network."""
+
+    def __init__(self, example_graph: HeteroGraph, params: dict):
+        """Create model parameters and layers.
+
+        Args:
+            example_graph: HeteroGraph with the same entity types and numbers
+                of features for each entity as the graphs to be processed.
+            params: dict of parameters for the structure of the model
+        """
         super(HeteroGNN, self).__init__()
 
         self.example_graph = example_graph
@@ -36,34 +47,25 @@ class HeteroGNN(torch.nn.Module):
             self.relus.append(nn.ModuleDict({typ: nn.PReLU() for typ in node_types}))
         self.post_mps = nn.ModuleDict({typ: nn.Linear(self.attn_heads * self.hidden_size, self.hidden_size) for typ in node_types})
 
-        ############# Your code here #############
-        ## (~10 lines of code)
-        ## Note:
-        ## 1. For self.convs1 and self.convs2, call generate_convs at first and then
-        ##    pass the returned dictionary of `HeteroGNNConv` to `HeteroGNNWrapperConv`.
-        ## 2. For self.bns, self.relus and self.post_mps, the keys are node_types.
-        ##    `deepsnap.hetero_graph.HeteroGraph.node_types` will be helpful.
-        ## 3. Initialize all batchnorms to torch.nn.BatchNorm1d(hidden_size, eps=1).
-        ## 4. Initialize all relus to nn.LeakyReLU().
-        ## 5. For self.post_mps, each value in the ModuleDict is a linear layer
-        ##    where the `out_features` is the number of classes for that node type.
-        ##    `deepsnap.hetero_graph.HeteroGraph.num_node_labels(node_type)` will be
-        ##    useful.
-        ##########################################
 
-    def generate_convs(self, conv_layer, first_layer=False):
-        # TODO: Implement this function that returns a dictionary of `HeteroGNNConv`
-        # layers where the keys are message types. `example_graph` is deepsnap `HeteroGraph`
-        # object and the `conv` is the `HeteroGNNConv`.
+    def generate_convs(
+            self,
+            conv_layer: type, 
+            first_layer: bool=False
+        ) -> dict[nn.Module]:
+        """Generate graph convolutional layers for each message type.
+        
+        Args:
+            conv_layer: type of a torch.nn.Module to be used for the graph
+                convolutional layers (e.g. "torch.nn.Linear")
+            first_layer: if True, this is the first layer, and the input dim
+                should be adjusted accordingly.
 
+        Returns:
+            Dictionary of graph convolutional modules, one for each message type
+            in the example graph.
+        """
         convs = {}
-
-        ############# Your code here #############
-        ## (~9 lines of code)
-        ## Note:
-        ## 1. See the hints above!
-        ## 2. conv is of type `HeteroGNNConv`
-
         msgs = self.example_graph.message_types
         for m in msgs:
             if first_layer:
@@ -78,36 +80,35 @@ class HeteroGNN(torch.nn.Module):
                 add_self_loops=self.add_self_loops,
             )
             convs.update({m: cur_conv})
-
-        ##########################################
-
         return convs
 
-    def forward(self, node_feature, edge_index, edge_feature):
-        # TODO: Implement the forward function. Notice that `node_feature` is
-        # a dictionary of tensors where keys are node types and values are
-        # corresponding feature tensors. The `edge_index` is a dictionary of
-        # tensors where keys are message types and values are corresponding
-        # edge index tensors (with respect to each message type).
+    def forward(
+            self,
+            node_feature: dict[str: torch.Tensor],
+            edge_index: dict[Tuple[str, str, str], torch.Tensor],
+            edge_feature: dict[Tuple[str, str, str], torch.Tensor],
+        ) -> torch.Tensor:
+        """Evaluate the model in the forward direction.
 
+        Args:
+            node_feature: dict of node feature tensors keyed by node type name
+            edge_index: dict of edge index tensors keyed by edge type name tuple
+            edge_feature: dict of edge feature tensors keyed by edge type name
+                tuple
+        
+        Returns: tensor of predictions for the edges of the graph.
+        """
         x = node_feature
         if self.sparsify_index:
             idx = sparsify_edge_index(edge_index, node_feature=node_feature)
         else:
             idx = edge_index
 
-        ############# Your code here #############
-        ## (~7 lines of code)
-        ## Note:
-        ## 1. `deepsnap.hetero_gnn.forward_op` can be helpful.
-
         for i in range(self.num_layers):
             x = self.convs[i](node_features=x, edge_indices=idx, edge_features=edge_feature)
             x = forward_op(x, self.bns[i])
             x = forward_op(x, self.relus[i])
-        ##########################################
 
-        # Edge classification prediction head
         x = forward_op(x, self.post_mps)
         edges = self.edge_head(node_features=x, edge_indices=edge_index)
         edges = {edge_type: F.sigmoid(edge_vals) for edge_type, edge_vals in edges.items()}
@@ -127,23 +128,23 @@ class HeteroGNN(torch.nn.Module):
             edge_dict[edge_type] = torch.matmul(embs_u, embs_v).squeeze((1, 2))
         return edge_dict
 
-    def loss(self, preds, y):
+    def loss(
+            self,
+            preds: dict[Tuple[str, str, str]: torch.Tensor],
+            y: dict[Tuple[str, str, str]: torch.Tensor],
+        ) -> float:
+        """Calculate loss between a set of predictions and labels.
+        
+        Args:
+            preds: edge class predictions (float) by edge type
+            y: edge class labels (int) by edge type
+
+        Returns:
+            float giving the loss
+        """
         loss = 0
-
-        ############# Your code here #############
-        ## (~3 lines of code)
-        ## Note:
-        ## 1. For each node type in preds, accumulate computed loss to `loss`
-        ## 2. Loss need to be computed with respect to the given index
-        ## 3. preds is a dictionary of model predictions keyed by node_type.
-        ## 4. indeces is a dictionary of labeled supervision nodes keyed
-        ##    by node_type
-
         for edge_type, y_vals in y.items():
             loss += F.cross_entropy(preds[edge_type], y_vals.to(torch.float))
-
-        ##########################################
-
         return loss
 
 
@@ -162,14 +163,6 @@ class HeteroGNNConv(pyg_nn.MessagePassing):
 
         self.lin_update = nn.Linear(in_features=self.out_channels * 2, out_features=self.out_channels)
 
-        ############# Your code here #############
-        ## (~3 lines of code)
-        ## Note:
-        ## 1. Initialize the 3 linear layers.
-        ## 2. Think through the connection between the mathematical
-        ##    definition of the update rule and torch linear layers!
-        ##########################################
-
     def forward(
         self,
         node_feature_src,
@@ -177,61 +170,30 @@ class HeteroGNNConv(pyg_nn.MessagePassing):
         edge_index,
         size=None
     ):
-        ############# Your code here #############
-        ## (~1 line of code)
-        ## Note:
-        ## 1. Unlike Colabs 3 and 4, we just need to call self.propagate with
-        ## proper/custom arguments.
-
         return self.propagate(edge_index=edge_index, size=size, node_feature_src=node_feature_src, node_feature_dst=node_feature_dst)
 
-        ##########################################
 
     def message_and_aggregate(self, edge_index, node_feature_src):
+        return matmul(edge_index, node_feature_src, reduce=self.aggr)
 
-        out = None
-        ############# Your code here #############
-        ## (~1 line of code)
-        ## Note:
-        ## 1. Different from what we implemented in Colabs 3 and 4, we use message_and_aggregate
-        ##    to combine the previously seperate message and aggregate functions.
-        ##    The benefit is that we can avoid materializing x_i and x_j
-        ##    to make the implementation more efficient.
-        ## 2. To implement efficiently, refer to PyG documentation for message_and_aggregate
-        ##    and sparse-matrix multiplication:
-        ##    https://pytorch-geometric.readthedocs.io/en/latest/notes/sparse_tensor.html
-        ## 3. Here edge_index is torch_sparse SparseTensor. Although interesting, you
-        ##    do not need to deeply understand SparseTensor represenations!
-        ## 4. Conceptually, think through how the message passing and aggregation
-        ##    expressed mathematically can be expressed through matrix multiplication.
-
-        out = matmul(edge_index, node_feature_src, reduce=self.aggr)
-
-
-        ##########################################
-
-        return out
 
     def update(self, aggr_out, node_feature_dst):
-
-        ############# Your code here #############
-        ## (~4 lines of code)
-        ## Note:
-        ## 1. The update function is called after message_and_aggregate
-        ## 2. Think through the one-one connection between the mathematical update
-        ##    rule and the 3 linear layers defined in the constructor.
-
        msgs = self.lin_src(aggr_out)
        owns = self.lin_dst(node_feature_dst)
        concats = torch.cat([owns, msgs], dim=1)
        aggr_out = self.lin_update(concats)
-
-       ##########################################
        return aggr_out
     
 
 class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
-    def __init__(self, convs, params):
+    """Wrapper which manages the aggregation of messages across multiple message
+    types, each with their own graph convolutional layers."""
+
+    def __init__(
+            self,
+            convs: dict[Tuple[str, str, str]: nn.Module],
+            params: dict,
+        ):
         super(HeteroGNNWrapperConv, self).__init__(convs, None)
         self.aggr = params["aggr"]
 
@@ -240,33 +202,15 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
 
         # A numpy array that stores the final attention probability
         self.alpha = None
-
         self.attn_proj = None
 
         if self.aggr == "attn":
-            ############# Your code here #############
-            ## (~1 line of code)
-            ## Note:
-            ## 1. Initialize self.attn_proj, where self.attn_proj should include
-            ##    two linear layers. Note, make sure you understand
-            ##    which part of the equation self.attn_proj captures.
-            ## 2. You should use nn.Sequential for self.attn_proj
-            ## 3. nn.Linear and nn.Tanh are useful.
-            ## 4. You can model a weight vector (rather than matrix) by using:
-            ##    nn.Linear(some_size, 1, bias=False).
-            ## 5. The first linear layer should have out_features as params['attn_size']
-            ## 6. You can assume we only have one "head" for the attention.
-            ## 7. We recommend you to implement the mean aggregation first. After
-            ##    the mean aggregation works well in the training, then you can
-            ##    implement this part.
-
             self.attn_proj = nn.Sequential(
                 nn.Linear(in_features=params["hidden_size"], out_features=params["attn_size"], bias=True),
                 nn.Tanh(),
                 nn.Linear(in_features=params["attn_size"], out_features=1, bias=False),
             )
 
-            ##########################################
 
     def reset_parameters(self):
         super(deepsnap.hetero_gnn.HeteroConv, self).reset_parameters()
@@ -274,7 +218,22 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             for layer in self.attn_proj.children():
                 layer.reset_parameters()
 
-    def forward(self, node_features, edge_indices, edge_features):
+    def forward(
+            self, 
+            node_features: dict[str: torch.Tensor], 
+            edge_indices: dict[Tuple[str, str, str]: torch.Tensor], 
+            edge_features: dict[Tuple[str, str, str]: torch.Tensor],
+        ) -> dict[str: torch.Tensor]:
+        """Evaluate the message aggregation in the forward direction.
+        
+        Args:
+            node_features: dict of node feature tensors keyed by node type name
+            edge_indices: dict of edge index tensors keyed by edge type name tuple
+            edge_features: dict of edge feature tensors keyed by edge type name
+                tuple
+        
+        Returns: tensor of node embeddings to update the graph with
+        """
         message_type_emb = {}
         for message_key in edge_indices:
             src_type, edge_type, dst_type = message_key
@@ -301,22 +260,11 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
                 node_emb[node_type] = self.aggregate(embs)
         return node_emb
 
-    def aggregate(self, xs):
-        # TODO: Implement this function that aggregates all message type results.
-        # Here, xs is a list of tensors (embeddings) with respect to message
-        # type aggregation results.
-
+    def aggregate(self, xs: list[torch.Tensor]) -> torch.Tensor:
+        """Aggregate all message type results."""
         if self.aggr == "mean":
-
-            ############# Your code here #############
-            ## (~2 lines of code)
-            ## Note:
-            ## 1. Explore the function parameter `xs`!
-
             x = torch.stack(xs, dim=-1)
             return x.mean(axis=-1)
-
-            ##########################################
 
         elif self.aggr == "attn":
             N = xs[0].shape[0] # Number of nodes for that node type
@@ -335,7 +283,12 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             return x.sum(dim=0)
 
 
-def train(model, optimizer, loader):
+def train(
+        model: nn.Module,
+        optimizer: torch.optim.optimizer.Optimizer,
+        loader: torch.utils.data.DataLoader,
+    ) -> float:
+    """Train the model for one epoch through the given dataloader."""
     model.train()
     for batch in loader:
         preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
@@ -346,7 +299,11 @@ def train(model, optimizer, loader):
     return loss.item()
 
 
-def evaluate(model, loader):
+def evaluate(
+        model: nn.Module,
+        loader: torch.utils.data.DataLoader
+    ) -> Tuple[float, float]:
+    """Evaluate current model on a dataloader of graphs."""
     model.eval()
     correct, total, num_ones, num_total = 0, 0, 0, 0
     with torch.no_grad():
@@ -364,8 +321,11 @@ def evaluate(model, loader):
     return (correct_frac, ones_frac)
 
 
-def sparsify_edge_index(edge_index: dict[torch.Tensor], node_feature: dict[torch.Tensor]) -> dict[Tuple: SparseTensor]:
-    """Convert batch's edge index into sparsified version."""
+def sparsify_edge_index(
+        edge_index: dict[torch.Tensor],
+        node_feature: dict[torch.Tensor]
+    ) -> dict[Tuple: SparseTensor]:
+    """Convert batch's edge index into a SparseTensor."""
     idx_dict = {}
     for key, cur_idx in edge_index.items():
         adj = SparseTensor(
