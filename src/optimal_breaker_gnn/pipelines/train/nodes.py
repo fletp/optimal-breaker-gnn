@@ -91,12 +91,12 @@ def train_model(
     logs = []
     for epoch in range(1, 1 + params_train["epochs"]):
         print('Training...')
-        loss = train(model, optimizer, loaders["train"])
+        loss = train(model, optimizer, loaders["train"], params_train["device"])
         
         print('Evaluating...')
-        train_acc, train_ones = evaluate(model, loaders["train"])
-        valid_acc, valid_ones = evaluate(model, loaders["valid"])
-        test_acc, test_ones = evaluate(model, loaders["test"])
+        train_acc, train_ones = evaluate(model, loaders["train"], params_train["device"])
+        valid_acc, valid_ones = evaluate(model, loaders["valid"], params_train["device"])
+        test_acc, test_ones = evaluate(model, loaders["test"], params_train["device"])
 
         log_dict = {
                 'epoch': epoch,

@@ -288,10 +288,12 @@ def train(
         model: nn.Module,
         optimizer: torch.optim.Optimizer,
         loader: DataLoader,
+        device: torch.device,
     ) -> float:
     """Train the model for one epoch through the given dataloader."""
     model.train()
     for batch in loader:
+        batch.to(device)
         preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
         loss = model.loss(preds=preds, y=batch.edge_label)
         loss.backward()
@@ -302,13 +304,15 @@ def train(
 
 def evaluate(
         model: nn.Module,
-        loader: DataLoader
+        loader: DataLoader,
+        device: torch.device
     ) -> Tuple[float, float]:
     """Evaluate current model on a dataloader of graphs."""
     model.eval()
     correct, total, num_ones, num_total = 0, 0, 0, 0
     with torch.no_grad():
         for batch in loader:
+            batch.to(device)
             preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
             for edge_type in batch.edge_label:
                 y_pred = preds[edge_type].round().cpu().detach().numpy()
