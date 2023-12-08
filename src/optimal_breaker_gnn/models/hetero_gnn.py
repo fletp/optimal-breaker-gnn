@@ -33,7 +33,7 @@ class HeteroGNN(torch.nn.Module):
             cur_convs = self.generate_convs(pyg_nn.GATv2Conv, first_layer=first_layer)
             self.convs.append(HeteroGNNWrapperConv(cur_convs, params))
             self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(self.attn_heads * self.hidden_size, eps=1) for typ in node_types}))
-            self.relus.append(nn.ModuleDict({typ: nn.LeakyReLU() for typ in node_types}))
+            self.relus.append(nn.ModuleDict({typ: nn.PReLU() for typ in node_types}))
         self.post_mps = nn.ModuleDict({typ: nn.Linear(self.attn_heads * self.hidden_size, self.hidden_size) for typ in node_types})
 
         ############# Your code here #############
