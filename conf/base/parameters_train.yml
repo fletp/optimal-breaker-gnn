@@ -24,6 +24,7 @@ dataloaders:
   seed: 42
 
 structure:
+  conv_layer: GATv2Conv
   num_layers: 10
   hidden_size: 64
   edge_dim: 2

@@ -34,6 +34,7 @@ class HeteroGNN(torch.nn.Module):
         self.edge_dim = params["edge_dim"]
         self.attn_heads = params["attn_heads"]
         self.add_self_loops = params["add_self_loops"]
+        self.conv_layer = params["conv_layer"]
 
         self.convs, self.bns, self.relus = nn.ModuleList(), nn.ModuleList(), nn.ModuleList()
         node_types = self.example_graph.node_types
@@ -42,16 +43,22 @@ class HeteroGNN(torch.nn.Module):
                 first_layer = True
             else:
                 first_layer = False
-            cur_convs = self.generate_convs(pyg_nn.GATv2Conv, first_layer=first_layer)
+            if self.conv_layer == "GATv2Conv":
+                hid = self.attn_heads * self.hidden_size
+            elif self.conv_layer == "HeteroGNNConv":
+                hid = self.hidden_size
+            else:
+                raise NotImplementedError()
+            cur_convs = self.generate_convs(conv_layer=self.conv_layer, first_layer=first_layer)
             self.convs.append(HeteroGNNWrapperConv(cur_convs, params))
-            self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(self.attn_heads * self.hidden_size, eps=1) for typ in node_types}))
+            self.bns.append(nn.ModuleDict({typ: nn.BatchNorm1d(hid, eps=1) for typ in node_types}))
             self.relus.append(nn.ModuleDict({typ: nn.PReLU() for typ in node_types}))
-        self.post_mps = nn.ModuleDict({typ: nn.Linear(self.attn_heads * self.hidden_size, self.hidden_size) for typ in node_types})
+        self.post_mps = nn.ModuleDict({typ: nn.Linear(hid, self.hidden_size) for typ in node_types})
 
 
     def generate_convs(
             self,
-            conv_layer: Type, 
+            conv_layer: str, 
             first_layer: bool=False
         ) -> dict[nn.Module]:
         """Generate graph convolutional layers for each message type.
@@ -69,17 +76,30 @@ class HeteroGNN(torch.nn.Module):
         convs = {}
         msgs = self.example_graph.message_types
         for m in msgs:
-            if first_layer:
-                in_ch_src = self.example_graph.num_node_features(m[0])
+            if conv_layer == "GATv2Conv":
+                if first_layer:
+                    in_ch_src = self.example_graph.num_node_features(m[0])
+                else:
+                    in_ch_src = self.hidden_size * self.attn_heads
+                cur_conv = pyg_nn.GATv2Conv(
+                    in_channels=in_ch_src,
+                    out_channels=self.hidden_size,
+                    edge_dim=self.edge_dim,
+                    heads=self.attn_heads,
+                    add_self_loops=self.add_self_loops,
+                )
+            elif conv_layer == "HeteroGNNConv":
+                if first_layer:
+                    in_ch = self.example_graph.num_node_features(m[0]) + self.example_graph.num_edge_features(m)
+                else:
+                    in_ch = self.hidden_size + self.example_graph.num_edge_features(m)
+                cur_conv = HeteroGNNConv(
+                    in_channels=in_ch,
+                    out_channels=self.hidden_size,
+                    aggr="sum",
+                )
             else:
-                in_ch_src = self.hidden_size * self.attn_heads
-            cur_conv = conv_layer(
-                in_channels=in_ch_src,
-                out_channels=self.hidden_size,
-                edge_dim=self.edge_dim,
-                heads=self.attn_heads,
-                add_self_loops=self.add_self_loops,
-            )
+                raise NotImplementedError()
             convs.update({m: cur_conv})
         return convs
 
@@ -150,39 +170,33 @@ class HeteroGNN(torch.nn.Module):
 
 
 class HeteroGNNConv(pyg_nn.MessagePassing):
-    def __init__(self, in_channels_src, in_channels_dst, out_channels):
-        super(HeteroGNNConv, self).__init__(aggr="mean")
+    def __init__(
+            self,
+            in_channels: int,
+            out_channels: int,
+            aggr: str,
+        ):
+        super(HeteroGNNConv, self).__init__(aggr=aggr)
 
-        self.in_channels_src = in_channels_src
-        self.in_channels_dst = in_channels_dst
+        self.in_channels = in_channels
         self.out_channels = out_channels
-
-        # To simplify implementation, please initialize both self.lin_dst
-        # and self.lin_src out_features to out_channels
-        self.lin_dst = nn.Linear(in_features=self.in_channels_dst, out_features=self.out_channels)
-        self.lin_src = nn.Linear(in_features=self.in_channels_src, out_features=self.out_channels)
-
-        self.lin_update = nn.Linear(in_features=self.out_channels * 2, out_features=self.out_channels)
+        self.lin_update = nn.Linear(in_features=self.in_channels, out_features=self.out_channels)
 
     def forward(
         self,
-        node_feature_src,
-        node_feature_dst,
-        edge_index,
-        size=None
+        node_feature: torch.Tensor,
+        edge_index: torch.Tensor,
+        edge_feature: torch.Tensor,
+        size: int = None,
     ):
-        return self.propagate(edge_index=edge_index, size=size, node_feature_src=node_feature_src, node_feature_dst=node_feature_dst)
+        return self.propagate(edge_index=edge_index, size=size, x=node_feature, edge_feature=edge_feature)
 
 
-    def message_and_aggregate(self, edge_index, node_feature_src):
-        return matmul(edge_index, node_feature_src, reduce=self.aggr)
+    def message(self, x_j, edge_feature):
+        return torch.concat([x_j, edge_feature], dim=1)
 
-
-    def update(self, aggr_out, node_feature_dst):
-       msgs = self.lin_src(aggr_out)
-       owns = self.lin_dst(node_feature_dst)
-       concats = torch.cat([owns, msgs], dim=1)
-       aggr_out = self.lin_update(concats)
+    def update(self, aggr_out):
+       aggr_out = self.lin_update(aggr_out)
        return aggr_out
     
 
@@ -243,9 +257,9 @@ class HeteroGNNWrapperConv(deepsnap.hetero_gnn.HeteroConv):
             edge_feature = edge_features[message_key]
             message_type_emb[message_key] = (
                 self.convs[message_key](
-                    x=node_feature,
-                    edge_index=edge_index,
-                    edge_attr=edge_feature,
+                    node_feature,
+                    edge_index,
+                    edge_feature,
                 )
             )
         node_emb = {dst: [] for _, _, dst in message_type_emb.keys()}
