@@ -27,6 +27,7 @@ network_scenario:
 
 optimize:
   big_m_scale: 10
+  solver: XPRESS
   mode: "label"
   file_basename: optim_res_dict
   file_dir_time_format: "%Y-%m-%dT%H.%M.%S.%fZ"

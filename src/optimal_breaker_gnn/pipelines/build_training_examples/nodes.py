@@ -147,7 +147,7 @@ def optimize_scenario(G: nx.Graph, params: dict) -> nx.Graph:
     """Apply optimization to network."""
     tic = time.perf_counter()
     prob = define_problem(G=G, mode="label", params=params)
-    prob.solve(solver=cp.XPRESS, verbose=True)
+    prob.solve(solver=params["solver"], verbose=True)
     G = concretize_network_attrs(G)
     toc = time.perf_counter()
     res = {
