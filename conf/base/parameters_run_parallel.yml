@@ -7,20 +7,21 @@
 slurm:
   ruse: False
   sbatch:
-    job-name: ng-graph
+    job-name: layers
     output: slurm_logs/*.%j.out # Note use of * wildcard to be replaced with job-name
     error: slurm_logs/*.%j.err
     mail-user: passow@stanford.edu
     mail-type: ALL
-    partition: serc
+    partition: ramr
     mem: 16GB
     ntasks: 2 # I believe that this is what we need for SequentialRunner, while ParallelRunner needs n_examples + 1
     cpus-per-task: 3
+    gpus: 1
     time: 2-00:00
-    array: 100-2400:100
+    array: 2-10:2
   n_sequential_jobs: 1
   kedro:
     pipeline: train
     runner: SequentialRunner
     to-nodes: train_model
-    params: "dataloaders.splits.train.n_examples_from_frac:$SLURM_ARRAY_TASK_ID"
+    params: "structure.num_layers:$SLURM_ARRAY_TASK_ID,structure.conv_layer:GATv2Conv"
