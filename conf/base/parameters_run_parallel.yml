@@ -18,9 +18,9 @@ slurm:
     cpus-per-task: 3
     gpus: 1
     time: 2-00:00
-    array: 2-10:2
+    # array: 2-10:2
   n_sequential_jobs: 1
   kedro:
     pipeline: train
     runner: SequentialRunner
-    params: "structure.num_layers:$SLURM_ARRAY_TASK_ID,structure.conv_layer:GATv2Conv,train.device:cuda"
+    params: "structure.num_layers:2,structure.conv_layer:GATv2Conv,train.device:cuda" # $SLURM_ARRAY_TASK_ID
