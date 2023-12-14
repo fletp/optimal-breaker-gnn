@@ -23,5 +23,4 @@ slurm:
   kedro:
     pipeline: train
     runner: SequentialRunner
-    to-nodes: train_model
     params: "structure.num_layers:$SLURM_ARRAY_TASK_ID,structure.conv_layer:GATv2Conv,train.device:cuda"
