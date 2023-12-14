@@ -85,7 +85,7 @@ def train_model(
     )
 
     best_model = None
-    best_valid_acc = 0
+    best_valid_score = 0
     best_metrics = None
 
     logs = []
@@ -94,16 +94,16 @@ def train_model(
         loss = train(model, optimizer, loaders["train"], params_train["device"])
         
         print('Evaluating...')
-        train_acc, train_ones = evaluate(model, loaders["train"], params_train["device"])
-        valid_acc, valid_ones = evaluate(model, loaders["valid"], params_train["device"])
-        test_acc, test_ones = evaluate(model, loaders["test"], params_train["device"])
+        train_score, train_ones = evaluate(model, loaders["train"], params_train["device"])
+        valid_score, valid_ones = evaluate(model, loaders["valid"], params_train["device"])
+        test_score, test_ones = evaluate(model, loaders["test"], params_train["device"])
 
         log_dict = {
                 'epoch': epoch,
                 'loss': loss,
-                'train_acc': train_acc,
-                'validation_acc': valid_acc,
-                'test_acc': test_acc,
+                'train_score': train_score,
+                'validation_score': valid_score,
+                'test_score': test_score,
                 'train_ones': train_ones,
                 'validation_ones': valid_ones,
                 'test_ones': test_ones,
@@ -112,14 +112,14 @@ def train_model(
 
         print(f'Epoch: {epoch:02d}, '
             f'Loss: {loss:.4f}, '
-            f'Train: {100 * train_acc:.2f}%, '
-            f'Valid: {100 * valid_acc:.2f}%, '
+            f'Train: {100 * train_score:.2f}%, '
+            f'Valid: {100 * valid_score:.2f}%, '
             f'Train % Ones: {100 * train_ones:.2f}%, '
             f'Valid % Ones: {100 * valid_ones:.2f}%'
         )
 
-        if valid_acc > best_valid_acc:
-            best_valid_acc = valid_acc
+        if valid_score > best_valid_score:
+            best_valid_score = valid_score
             best_model = copy.deepcopy(model)
             best_metrics = copy.deepcopy(log_dict)
         

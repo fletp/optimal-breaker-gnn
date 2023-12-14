@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import deepsnap
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +10,7 @@ from deepsnap.batch import Batch
 from deepsnap.hetero_gnn import forward_op
 from deepsnap.hetero_graph import HeteroGraph
 from torch.utils.data import DataLoader
-from sklearn.metrics import f1_score
+from sklearn.metrics import roc_auc_score
 from torch_sparse import SparseTensor, matmul
 from typing import Type
 
@@ -323,21 +324,22 @@ def evaluate(
     ) -> Tuple[float, float]:
     """Evaluate current model on a dataloader of graphs."""
     model.eval()
-    correct, total, num_ones, num_total = 0, 0, 0, 0
+    y_pred_ls = []
+    y_true_ls = []
     with torch.no_grad():
         for batch in loader:
             batch.to(device)
             preds = model(batch.node_feature, batch.edge_index, batch.edge_feature)
             for edge_type in batch.edge_label:
-                y_pred = preds[edge_type].round().cpu().detach().numpy()
+                y_pred = preds[edge_type].cpu().detach().numpy()
                 y_true = batch.edge_label[edge_type].cpu().detach().numpy()
-                num_ones += y_pred.sum()
-                num_total += len(y_pred)
-                total += len(y_true)
-                correct += sum(y_true == y_pred)
-        correct_frac = correct / total
-        ones_frac = num_ones / num_total
-    return (correct_frac, ones_frac)
+                y_pred_ls.append(y_pred)
+                y_true_ls.append(y_true)
+        y_pred = np.concatenate(y_pred_ls, axis=0)
+        y_true = np.concatenate(y_true_ls, axis=0)
+        score = roc_auc_score(y_true, y_pred)
+        ones_frac = y_pred.round().sum() / y_pred.shape[0]
+    return (score, ones_frac)
 
 
 def sparsify_edge_index(
