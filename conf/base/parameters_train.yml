@@ -36,5 +36,5 @@ structure:
 train:
   lr: 0.003
   weight_decay: 0.00001
-  epochs: 20
+  epochs: 100
   device: cpu
