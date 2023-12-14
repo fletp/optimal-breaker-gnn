@@ -30,7 +30,6 @@ structure:
   edge_dim: 2
   attn_size: 32
   attn_heads: 3
-  sparsify_index: False
   add_self_loops: True
   aggr: mean
 

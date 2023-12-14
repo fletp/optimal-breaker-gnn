@@ -11,7 +11,6 @@ from deepsnap.hetero_gnn import forward_op
 from deepsnap.hetero_graph import HeteroGraph
 from torch.utils.data import DataLoader
 from sklearn.metrics import roc_auc_score
-from torch_sparse import SparseTensor, matmul
 from typing import Type
 
 
@@ -31,7 +30,6 @@ class HeteroGNN(torch.nn.Module):
         self.example_graph = example_graph
         self.num_layers = params["num_layers"]
         self.hidden_size = params["hidden_size"]
-        self.sparsify_index = params["sparsify_index"]
         self.edge_dim = params["edge_dim"]
         self.attn_heads = params["attn_heads"]
         self.add_self_loops = params["add_self_loops"]
@@ -121,10 +119,7 @@ class HeteroGNN(torch.nn.Module):
         Returns: tensor of predictions for the edges of the graph.
         """
         x = node_feature
-        if self.sparsify_index:
-            idx = sparsify_edge_index(edge_index, node_feature=node_feature)
-        else:
-            idx = edge_index
+        idx = edge_index
 
         for i in range(self.num_layers):
             x = self.convs[i](node_features=x, edge_indices=idx, edge_features=edge_feature)
@@ -340,20 +335,4 @@ def evaluate(
         score = roc_auc_score(y_true, y_pred)
         ones_frac = y_pred.round().sum() / y_pred.shape[0]
     return (score, ones_frac)
-
-
-def sparsify_edge_index(
-        edge_index: dict[torch.Tensor],
-        node_feature: dict[torch.Tensor]
-    ) -> dict[Tuple: SparseTensor]:
-    """Convert batch's edge index into a SparseTensor."""
-    idx_dict = {}
-    for key, cur_idx in edge_index.items():
-        adj = SparseTensor(
-            row=cur_idx[0],
-            col=cur_idx[1],
-            sparse_sizes=(node_feature[key[0]].shape[0], node_feature[key[2]].shape[0]),
-        )
-        idx_dict[key] = adj.t()
-    return idx_dict
     
