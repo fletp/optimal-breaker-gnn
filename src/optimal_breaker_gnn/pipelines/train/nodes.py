@@ -11,6 +11,7 @@ import torch.nn as nn
 from deepsnap.batch import Batch
 from deepsnap.hetero_graph import HeteroGraph
 from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
 
 from optimal_breaker_gnn.models.hetero_gnn import HeteroGNN, evaluate, train
 
@@ -81,11 +82,15 @@ def train_model(
     best_metrics = None
 
     logs = []
-    for epoch in range(1, 1 + params_train["epochs"]):
-        print('Training...')
+    epoch_genr = range(1, 1 + params_train["epochs"])
+    if not params_train["verbose"]:
+        print(f"Training for {params_train['epochs']} Epochs")
+        epoch_genr = tqdm(epoch_genr)
+    for epoch in epoch_genr:
+        if params_train["verbose"]: print('Training...')
         loss = train(model, optimizer, loaders["train"], params_train["device"])
         
-        print('Evaluating...')
+        if params_train["verbose"]: print('Evaluating...')
         train_score, train_ones = evaluate(model, loaders["train"], params_train["device"])
         valid_score, valid_ones = evaluate(model, loaders["valid"], params_train["device"])
         test_score, test_ones = evaluate(model, loaders["test"], params_train["device"])
@@ -102,13 +107,14 @@ def train_model(
             }
         logs.append(log_dict)
 
-        print(f'Epoch: {epoch:02d}, '
-            f'Loss: {loss:.4f}, '
-            f'Train: {100 * train_score:.2f}%, '
-            f'Valid: {100 * valid_score:.2f}%, '
-            f'Train % Ones: {100 * train_ones:.2f}%, '
-            f'Valid % Ones: {100 * valid_ones:.2f}%'
-        )
+        if params_train["verbose"]:
+            print(f'Epoch: {epoch:02d}, '
+                f'Loss: {loss:.4f}, '
+                f'Train: {100 * train_score:.2f}%, '
+                f'Valid: {100 * valid_score:.2f}%, '
+                f'Train % Ones: {100 * train_ones:.2f}%, '
+                f'Valid % Ones: {100 * valid_ones:.2f}%'
+            )
 
         if valid_score > best_valid_score:
             best_valid_score = valid_score

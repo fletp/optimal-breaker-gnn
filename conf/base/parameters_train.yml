@@ -38,3 +38,4 @@ train:
   weight_decay: 0.00001
   epochs: 100
   device: cpu
+  verbose: False
