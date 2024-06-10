@@ -1,5 +1,13 @@
 # Optimal Breaker GNN
 
+**Course:** CS 224W (Machine Learning with Graphs)  
+**Quarter/Year:** Autumn 2023  
+**School:** Stanford University 
+**Authors:** Fletcher Passow and Jessica Long
+
+Accelerating electric grid topology optimization using graph neural networks. See the [Final Report](https://medium.com/@fletcherpassow/accelerating-electric-grid-optimization-using-graph-neural-networks-4d095d5c7729) for more information.
+
+
 ## Overview
 
 This is your new Kedro project, which was generated using `kedro 0.18.13`.
